@@ -1,0 +1,559 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>УрФУ | Рабочие пространства (Студент / Организатор)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: #f2f4f8;
+            padding: 2rem 1.5rem;
+            color: #1e2a3e;
+        }
+
+        /* контейнеры – минималистично, без излишнего дизайна */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* карточка входа/профиля */
+        .auth-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+        }
+
+        .role-badge {
+            display: inline-block;
+            background: #eef2ff;
+            padding: 0.3rem 0.9rem;
+            border-radius: 40px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-left: 1rem;
+        }
+
+        button, .btn-like {
+            background: #e2e8f0;
+            border: 1px solid #cbd5e1;
+            padding: 0.5rem 1.2rem;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            font-weight: 500;
+            transition: 0.1s linear;
+        }
+        button.primary {
+            background: #1e40af;
+            border-color: #1e40af;
+            color: white;
+        }
+        button.primary:hover {
+            background: #1e3a8a;
+        }
+        button.small {
+            padding: 0.3rem 0.9rem;
+            font-size: 0.8rem;
+        }
+        input, select {
+            padding: 0.5rem 0.8rem;
+            border-radius: 12px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            font-size: 0.9rem;
+        }
+        .flex-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 1rem;
+        }
+        .grid-cards {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        /* вкладки */
+        .tabs {
+            display: flex;
+            gap: 0.25rem;
+            border-bottom: 1px solid #cbd5e1;
+            margin-bottom: 1.5rem;
+        }
+        .tab-btn {
+            background: transparent;
+            border: none;
+            padding: 0.6rem 1.4rem;
+            font-weight: 500;
+            border-radius: 30px 30px 0 0;
+            color: #334155;
+            cursor: pointer;
+        }
+        .tab-btn.active {
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-bottom-color: white;
+            color: #0f172a;
+        }
+        .tab-content {
+            display: none;
+            background: white;
+            border-radius: 20px;
+            padding: 1.5rem;
+            border: 1px solid #e2e8f0;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        /* комментарии по ролям */
+        .role-comment-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .role-card {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 1rem;
+            border-left: 4px solid #94a3b8;
+        }
+        .role-title {
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+        .comment-text {
+            color: #1e293b;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            border-top: 1px dashed #cbd5e6;
+            padding-top: 0.5rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.2rem 0.7rem;
+            border-radius: 40px;
+            font-weight: 500;
+            font-size: 0.8rem;
+        }
+        .status-checked { background: #dcfce7; color: #166534; }
+        .status-pending { background: #fff3cd; color: #856404; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+        th, td {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        th {
+            background: #f1f5f9;
+            font-weight: 600;
+        }
+
+        hr {
+            margin: 1rem 0;
+        }
+
+        .note {
+            color: #475569;
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- Панель входа по почте УрФУ (имитация) -->
+    <div class="auth-panel" id="authPanel">
+        <div class="flex-row" style="justify-content: space-between;">
+            <div>
+                <strong>🔐 Вход по почте УрФУ</strong>
+                <div style="margin-top: 8px;" class="flex-row">
+                    <input type="email" id="emailInput" placeholder="ivanov@urfu.ru" value="student@urfu.ru" style="min-width: 240px;">
+                    <button id="loginBtn" class="primary">Войти</button>
+                </div>
+                <div class="note">✉️ тестовые: student@urfu.ru (студент) | org@urfu.ru (организатор)</div>
+            </div>
+            <div id="userInfo"></div>
+        </div>
+    </div>
+
+    <!-- Основной контент, видимый после входа -->
+    <div id="appContent" style="display: none;">
+        <!-- Роль студента -->
+        <div id="studentView" style="display: none;">
+            <div class="tabs" id="studentTabs">
+                <button class="tab-btn active" data-tab="tabComments">📝 Комментарии по ролям</button>
+                <button class="tab-btn" data-tab="tabStatus">📊 Статус работы + очередь</button>
+            </div>
+            <div id="tabComments" class="tab-content active">
+                <h3>💬 Комментарии преподавателя к работе команды</h3>
+                <p style="margin-bottom: 1rem; color: #2c3e50;">Команда: <span id="teamNameDisplay">—</span></p>
+                <div id="rolesCommentsContainer" class="role-comment-grid">
+                    <!-- динамически: тимлид, аналитик, разработчик, дизайнер, сценарист -->
+                </div>
+            </div>
+            <div id="tabStatus" class="tab-content">
+                <h3>✅ Статус проверки работы команды</h3>
+                <div id="teamStatusBlock" style="margin-top: 1rem;"></div>
+                <hr>
+                <h3>📋 Очередь на проверку (все команды)</h3>
+                <div id="queueTableContainer"></div>
+            </div>
+        </div>
+
+        <!-- Роль организатора -->
+        <div id="organizerView" style="display: none;">
+            <h2>👥 Панель организатора</h2>
+            <p style="margin-bottom: 1rem;">Преподаватели, которые ещё не проверили закреплённые работы (каждый проверяет по 5 работ)</p>
+            <div id="teachersUncheckedTable"></div>
+            <div class="note">* Данные из таблицы БД: отображается список преподавателей и количество непроверенных работ из их нагрузки.</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ---------- ИМИТАЦИЯ БАЗЫ ДАННЫХ (таблицы) ----------
+    // 1) Таблица "Комментарии по ролям для каждой команды"
+    // Структура: teamId (уникальный), teamName, comments: { teamlead, analyst, developer, designer, scenarist }
+    const COMMENTS_DB = [
+        {
+            teamId: 101,
+            teamName: "Команда «Альфа»",
+            comments: {
+                teamlead: "Тимлид: отличная координация, но сроки чуть сдвинуты. +1 балл.",
+                analyst: "Аналитик: требования проработаны хорошо, но не хватает диаграмм.",
+                developer: "Разработчик: код рабочий, но нужна документация.",
+                designer: "Дизайнер: UI понятный, но не адаптивен под мобильные.",
+                scenarist: "Сценарист: сюжет интересный, нужны правки по диалогам."
+            }
+        },
+        {
+            teamId: 102,
+            teamName: "Команда «Бета»",
+            comments: {
+                teamlead: "Тимлид: управление отличное, коммуникация на высоте.",
+                analyst: "Аналитик: отличный анализ, все метрики учтены.",
+                developer: "Разработчик: баги исправлены, код чистый.",
+                designer: "Дизайнер: великолепный дизайн, соответствует бренду.",
+                scenarist: "Сценарист: нарратив сильный, ждём финальную версию."
+            }
+        },
+        {
+            teamId: 103,
+            teamName: "Команда «Гамма»",
+            comments: {
+                teamlead: "Тимлид: требуется больше контроля задач.",
+                analyst: "Аналитик: данные неполные, доработать.",
+                developer: "Разработчик: есть критические баги, нужно исправить.",
+                designer: "Дизайнер: макеты сырые, нет прототипов.",
+                scenarist: "Сценарист: сценарий слабый, много клише."
+            }
+        }
+    ];
+
+    // 2) Таблица "Статус проверки работы команды" (проверена/не проверена)
+    const STATUS_DB = [
+        { teamId: 101, checked: true,   checkedDate: "2025-03-20" },
+        { teamId: 102, checked: true,   checkedDate: "2025-03-18" },
+        { teamId: 103, checked: false,  checkedDate: null },
+        { teamId: 104, checked: false,  checkedDate: null },  // дополнительная команда для очереди
+        { teamId: 105, checked: false,  checkedDate: null }
+    ];
+
+    // 3) Таблица "Очередь на проверку" (порядок очереди, основан на некой логике)
+    //    Для простоты создадим очередь из команд, у которых checked = false, отсортированных по приоритету.
+    //    Также добавим все команды, которые вообще есть в системе.
+    //    Для наглядности создадим массив очереди (id команды + позиция).
+    function computeQueueList() {
+        // все команды из COMMENTS_DB + возможно еще команды, у которых статус есть, но комментариев нет (на всякий случай добавим teamId 104,105)
+        const allTeamsIds = [101,102,103,104,105];
+        const statusMap = new Map(STATUS_DB.map(s => [s.teamId, s]));
+        // формируем очередь: сначала непроверенные, затем проверенные (но обычно очередь - это работы, ожидающие проверки)
+        // по заданию "какая в очереди на проверку их работы" – показываем список всех работ в очереди (непроверенные)
+        const pending = allTeamsIds.filter(id => {
+            const st = statusMap.get(id);
+            return st && st.checked === false;
+        });
+        // для красоты добавим имена команд
+        const teamNameMap = new Map();
+        COMMENTS_DB.forEach(c => teamNameMap.set(c.teamId, c.teamName));
+        teamNameMap.set(104, "Команда «Дельта»");
+        teamNameMap.set(105, "Команда «Эпсилон»");
+        return pending.map((id, idx) => ({
+            position: idx+1,
+            teamId: id,
+            teamName: teamNameMap.get(id) || `Команда #${id}`
+        }));
+    }
+
+    // 4) Таблица "Преподаватели и проверка работ" для организатора
+    //    Каждый преподаватель должен проверить по 5 работ (условно работы привязаны к командам).
+    //    Смоделируем: у каждого препода список teamIds, которые он проверяет, и отметка проверено/нет.
+    const TEACHERS_LOAD_DB = [
+        { teacherId: 1, name: "Елена Викторовна Соколова", assignedTeams: [101,102,103,104,105], checkedStatus: { 101: true, 102: true, 103: false, 104: false, 105: false } },
+        { teacherId: 2, name: "Алексей Петрович Громов", assignedTeams: [101,102,103,104,105], checkedStatus: { 101: false, 102: false, 103: false, 104: false, 105: false } },
+        { teacherId: 3, name: "Марина Игоревна Ветрова", assignedTeams: [101,102,103,104,105], checkedStatus: { 101: true, 102: true, 103: true, 104: false, 105: false } }
+    ];
+
+    // ---- вспомогательная функция: получение текущего пользователя (почта -> роль + команда) ----
+    // Логика: student@urfu.ru -> студент, привязан к teamId 101 (для демонстрации)
+    // можно добавить email: student2@urfu.ru для команды 102 и т.д., но по заданию достаточно демо.
+    // Организатор: org@urfu.ru
+    let currentUser = {
+        isLoggedIn: false,
+        role: null,      // 'student' or 'organizer'
+        email: null,
+        teamId: null,    // для студента
+        teamName: null
+    };
+
+    // Функции рендера для студента (комментарии + статус + очередь)
+    function renderStudentComments(teamId) {
+        const teamData = COMMENTS_DB.find(t => t.teamId === teamId);
+        if (!teamData) {
+            document.getElementById('rolesCommentsContainer').innerHTML = '<div class="note">Нет данных о комментариях для вашей команды.</div>';
+            return;
+        }
+        const roles = [
+            { key: 'teamlead', label: '👥 Тимлид' },
+            { key: 'analyst', label: '📊 Аналитик' },
+            { key: 'developer', label: '💻 Разработчик' },
+            { key: 'designer', label: '🎨 Дизайнер' },
+            { key: 'scenarist', label: '✍️ Сценарист' }
+        ];
+        const container = document.getElementById('rolesCommentsContainer');
+        container.innerHTML = '';
+        for (let role of roles) {
+            const commentText = teamData.comments[role.key] || 'Комментарий отсутствует';
+            const card = document.createElement('div');
+            card.className = 'role-card';
+            card.innerHTML = `
+                <div class="role-title">${role.label}</div>
+                <div class="comment-text">${escapeHtml(commentText)}</div>
+            `;
+            container.appendChild(card);
+        }
+    }
+
+    function renderStudentStatusAndQueue(teamId) {
+        // статус работы команды
+        const statusRecord = STATUS_DB.find(s => s.teamId === teamId);
+        let isChecked = statusRecord ? statusRecord.checked : false;
+        const statusHtml = `
+            <div style="background:#f1f5f9; padding:1rem; border-radius:16px;">
+                <span class="status-badge ${isChecked ? 'status-checked' : 'status-pending'}">
+                    ${isChecked ? '✅ Работа проверена' : '⏳ Работа НЕ проверена (ожидает)'}
+                </span>
+                ${isChecked && statusRecord.checkedDate ? `<span style="margin-left: 1rem;">Дата проверки: ${statusRecord.checkedDate}</span>` : ''}
+            </div>
+        `;
+        document.getElementById('teamStatusBlock').innerHTML = statusHtml;
+
+        // очередь на проверку (все работы, которые еще не проверены)
+        const queue = computeQueueList();
+        let queueHtml = '<table><thead><tr><th>Позиция в очереди</th><th>Команда</th><th>Статус</th></tr></thead><tbody>';
+        if (queue.length === 0) {
+            queueHtml += '<tr><td colspan="3">Нет работ в очереди на проверку</td></tr>';
+        } else {
+            queue.forEach(item => {
+                queueHtml += `<tr>
+                    <td>${item.position}</td>
+                    <td>${escapeHtml(item.teamName)}</td>
+                    <td><span class="status-badge status-pending">Ожидает проверки</span></td>
+                </tr>`;
+            });
+        }
+        queueHtml += '</tbody></table>';
+        document.getElementById('queueTableContainer').innerHTML = queueHtml;
+    }
+
+    // Рендер для организатора: кто из преподавателей не проверил работы
+    function renderOrganizerView() {
+        const container = document.getElementById('teachersUncheckedTable');
+        let html = '<table><thead><tr><th>Преподаватель</th><th>Закреплено работ (всего)</th><th>Непроверенные работы (ID команд)</th><th>Статус</th></tr></thead><tbody>';
+        TEACHERS_LOAD_DB.forEach(teacher => {
+            const assigned = teacher.assignedTeams;
+            const uncheckedTeams = assigned.filter(teamId => {
+                return teacher.checkedStatus[teamId] === false;
+            });
+            const uncheckedCount = uncheckedTeams.length;
+            const uncheckedList = uncheckedTeams.join(', ');
+            let statusText = '';
+            if (uncheckedCount === 0) statusText = '✅ Все проверены';
+            else statusText = `⚠️ Осталось проверить: ${uncheckedCount} работ`;
+            html += `<tr>
+                <td>${escapeHtml(teacher.name)}</td>
+                <td>${assigned.length}</td>
+                <td>${uncheckedCount > 0 ? uncheckedList : '—'}</td>
+                <td>${statusText}</td>
+            </tr>`;
+        });
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    }
+
+    // общий рендер после входа
+    function renderAfterLogin() {
+        const studentDiv = document.getElementById('studentView');
+        const organizerDiv = document.getElementById('organizerView');
+        if (currentUser.role === 'student') {
+            studentDiv.style.display = 'block';
+            organizerDiv.style.display = 'none';
+            // отобразить имя команды
+            const teamId = currentUser.teamId;
+            const teamObj = COMMENTS_DB.find(t => t.teamId === teamId);
+            const teamNameSpan = document.getElementById('teamNameDisplay');
+            if (teamObj) {
+                teamNameSpan.innerText = `${teamObj.teamName} (ID ${teamId})`;
+                currentUser.teamName = teamObj.teamName;
+            } else {
+                teamNameSpan.innerText = `Команда #${teamId} (информация о комментариях отсутствует)`;
+            }
+            // комментарии
+            renderStudentComments(teamId);
+            renderStudentStatusAndQueue(teamId);
+            // активируем вкладки (переключение)
+            attachStudentTabs();
+        } 
+        else if (currentUser.role === 'organizer') {
+            studentDiv.style.display = 'none';
+            organizerDiv.style.display = 'block';
+            renderOrganizerView();
+        }
+    }
+
+    function attachStudentTabs() {
+        const tabBtns = document.querySelectorAll('#studentTabs .tab-btn');
+        const contents = document.querySelectorAll('#studentView .tab-content');
+        function switchTab(tabId) {
+            contents.forEach(c => c.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            tabBtns.forEach(btn => {
+                if (btn.getAttribute('data-tab') === tabId) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+        tabBtns.forEach(btn => {
+            btn.removeEventListener('click', handler);
+            btn.addEventListener('click', handler);
+        });
+        function handler(e) {
+            const tabId = e.currentTarget.getAttribute('data-tab');
+            if (tabId) switchTab(tabId);
+        }
+        // по умолчанию комментарии активны
+    }
+
+    // эмуляция входа по почте УрФУ (валидация домена urfu.ru)
+    function login(email) {
+        const normalized = email.trim().toLowerCase();
+        if (!normalized.endsWith('@urfu.ru')) {
+            alert('Ошибка: требуется почта в домене @urfu.ru');
+            return false;
+        }
+        // определение роли: если содержит "student" или задан явно student@urfu.ru -> студент
+        // также можно задать организаторский email org@urfu.ru
+        if (normalized === 'org@urfu.ru') {
+            currentUser = {
+                isLoggedIn: true,
+                role: 'organizer',
+                email: normalized,
+                teamId: null,
+                teamName: null
+            };
+        } else {
+            // Любая другая почта @urfu.ru считается студентом, для демо привяжем к конкретной команде в зависимости от почты
+            // удобно: student@urfu.ru -> команда 101; student2@urfu.ru -> команда 102; student3@urfu.ru -> команда 103; остальные -> 101 по умолчанию
+            let teamId = 101; // дефолт
+            if (normalized === 'student2@urfu.ru') teamId = 102;
+            else if (normalized === 'student3@urfu.ru') teamId = 103;
+            else if (normalized === 'student4@urfu.ru') teamId = 104; // для очереди
+            else if (normalized === 'student@urfu.ru') teamId = 101;
+            // найти название команды
+            const foundTeam = COMMENTS_DB.find(t => t.teamId === teamId);
+            const teamName = foundTeam ? foundTeam.teamName : `Команда №${teamId}`;
+            currentUser = {
+                isLoggedIn: true,
+                role: 'student',
+                email: normalized,
+                teamId: teamId,
+                teamName: teamName
+            };
+        }
+        // обновить UI и показать app
+        document.getElementById('appContent').style.display = 'block';
+        document.getElementById('userInfo').innerHTML = `<span>✅ ${currentUser.email} <span class="role-badge">${currentUser.role === 'student' ? 'Студент' : 'Организатор'}</span></span>`;
+        renderAfterLogin();
+        return true;
+    }
+
+    function logout() {
+        currentUser = { isLoggedIn: false, role: null, email: null, teamId: null, teamName: null };
+        document.getElementById('appContent').style.display = 'none';
+        document.getElementById('userInfo').innerHTML = '';
+        document.getElementById('emailInput').value = '';
+        // очистить скрытые вьюхи
+        document.getElementById('studentView').style.display = 'none';
+        document.getElementById('organizerView').style.display = 'none';
+    }
+
+    // Обработчики входа
+    document.getElementById('loginBtn').addEventListener('click', () => {
+        const emailInput = document.getElementById('emailInput').value;
+        if (login(emailInput)) {
+            // сброс возможных старых вкладок
+        }
+    });
+
+    // вспомогательная функция для безопасности
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
+            return c;
+        });
+    }
+
+    // дополнительная возможность: если хотим разлогиниться, добавим кнопку, но не обязательно. Для удобства добавим кнопку выхода
+    const logoutBtn = document.createElement('button');
+    logoutBtn.textContent = 'Выйти';
+    logoutBtn.style.marginLeft = '10px';
+    logoutBtn.classList.add('small');
+    logoutBtn.addEventListener('click', () => {
+        logout();
+    });
+    document.querySelector('#authPanel .flex-row').appendChild(logoutBtn);
+    // начальное скрытие
+    logout(); // чистое состояние
+</script>
+</body>
+</html>
