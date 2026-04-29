@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>УрФУ | Студент + Организатор (с API)</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: #f2f4f8;
+            padding: 2rem;
+            color: #1e2a3e;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .auth-panel {
+            background: white;
+            border-radius: 20px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid #e2e8f0;
+        }
+        .flex-row { display: flex; gap: 1rem; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+        input, button {
+            padding: 0.6rem 1.2rem;
+            border-radius: 40px;
+            border: 1px solid #cbd5e1;
+            font-size: 0.9rem;
+        }
+        button.primary { background: #1e40af; color: white; border: none; cursor: pointer; }
+        .role-badge {
+            background: #eef2ff;
+            padding: 0.3rem 0.9rem;
+            border-radius: 40px;
+            font-size: 0.85rem;
+            margin-left: 0.8rem;
+        }
+        .tabs {
+            display: flex;
+            gap: 0.25rem;
+            border-bottom: 1px solid #cbd5e1;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            padding: 0.7rem 1.5rem;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            border-radius: 30px 30px 0 0;
+        }
+        .tab-btn.active {
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-bottom-color: white;
+        }
+        .tab-content { display: none; background: white; border-radius: 24px; padding: 1.5rem; border: 1px solid #e2e8f0; }
+        .tab-content.active { display: block; }
+        
+        .works-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+        .work-card {
+            background: #f8fafc;
+            padding: 1rem;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            cursor: pointer;
+            transition: 0.1s ease;
+        }
+        .work-card:hover {
+            border-color: #3b82f6;
+            background: #fafcff;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 0.2rem 0.8rem;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .status-checked { background: #dcfce7; color: #166534; }
+        .status-pending { background: #fff3cd; color: #856404; }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            backdrop-filter: blur(3px);
+        }
+        .modal-content {
+            background: white;
+            margin: 10% auto;
+            width: 90%;
+            max-width: 600px;
+            border-radius: 28px;
+            padding: 1.5rem;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .close-modal {
+            float: right;
+            font-size: 1.8rem;
+            cursor: pointer;
+            color: #94a3b8;
+        }
+        .close-modal:hover { color: #1e293b; }
+        
+        .peer-review {
+            background: #f1f5f9;
+            padding: 0.8rem;
+            border-radius: 16px;
+            margin-bottom: 0.8rem;
+        }
+        .note { font-size: 0.8rem; color: #475569; margin-top: 0.8rem; }
+        .team-name {
+            background: #eef2ff;
+            display: inline-block;
+            padding: 0.3rem 1rem;
+            border-radius: 50px;
+            margin-bottom: 1rem;
+        }
+        .org-works-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .org-work-card {
+            background: #f8fafc;
+            padding: 1rem;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            cursor: pointer;
+        }
+        .org-work-card:hover { border-color: #3b82f6; background: #fafcff; }
+        .stats-summary { background: #eef2ff; padding: 1rem; border-radius: 20px; margin-bottom: 1rem; }
+        .export-btn { background: #1e40af; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 40px; cursor: pointer; margin-top: 1rem; }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        th, td { padding: 0.8rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f1f5f9; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="auth-panel">
+        <div class="flex-row">
+            <div>
+                <strong>🔐 Вход по email</strong>
+                <div style="margin-top: 10px;">
+                    <input type="email" id="emailInput" placeholder="student@example.com" value="student@example.com">
+                    <button id="loginBtn" class="primary">Войти</button>
+                </div>
+                <div class="note">📧 student@example.com | beta@example.com (студенты)<br>org@example.com (организатор)</div>
+            </div>
+            <div id="userInfo"></div>
+        </div>
+    </div>
+
+    <div id="appContent" style="display: none;">
+        <div id="studentView" style="display: none;">
+            <div id="studentTeamName" class="team-name"></div>
+            <div id="studentWorksList" class="works-grid"></div>
+        </div>
+        <div id="organizerView" style="display: none;">
+            <h2>📊 Контроль проверки работ</h2>
+            <div id="organizerWorksGrid" class="org-works-grid"></div>
+        </div>
+    </div>
+</div>
+
+<div id="workModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h3 id="modalTitle"></h3>
+        <div id="modalBody"></div>
+        <button id="exportBtn" class="export-btn" style="display: none;">📥 Выгрузить CSV</button>
+    </div>
+</div>
+
+<script>
+    // ========== ПОДКЛЮЧЕНИЕ К API ==========
+    const API_URL = 'http://localhost:8000/api';
+    
+    let currentUser = { isLoggedIn: false, role: null, email: null, teamId: null, teamName: null };
+    
+    // ========== ВХОД ==========
+    async function login(email) {
+        if (!email || !email.includes('@')) {
+            alert('Введите корректный email');
+            return;
+        }
+        
+        try {
+            // Вызываем API
+            const response = await fetch(`${API_URL}/login?email=${encodeURIComponent(email)}`);
+            
+            if (!response.ok) {
+                const error = await response.json();
+                alert(error.detail || 'Ошибка входа');
+                return;
+            }
+            
+            const user = await response.json();
+            
+            if (user.role === 'org') {
+                // Организатор
+                currentUser = { isLoggedIn: true, role: 'organizer', email, id: user.id };
+                document.getElementById('studentView').style.display = 'none';
+                document.getElementById('organizerView').style.display = 'block';
+                renderOrganizerWorks();
+                
+            } else if (user.role === 'student') {
+                // Студент
+                currentUser = { 
+                    isLoggedIn: true, 
+                    role: 'student', 
+                    email, 
+                    teamId: user.team_id, 
+                    teamName: user.team_name,
+                    userId: user.id 
+                };
+                
+                document.getElementById('studentView').style.display = 'block';
+                document.getElementById('organizerView').style.display = 'none';
+                document.getElementById('studentTeamName').innerText = `🏆 ${user.team_name || 'Без команды'}`;
+                
+                // Загружаем работы команды
+                await loadStudentWorks(currentUser.teamId);
+            }
+            
+            document.getElementById('appContent').style.display = 'block';
+            document.getElementById('userInfo').innerHTML = `<span>✅ ${email} <span class="role-badge">${currentUser.role === 'student' ? 'Студент' : 'Организатор'}</span></span>`;
+            
+        } catch (error) {
+            console.error('Ошибка:', error);
+            alert('Не удалось подключиться к серверу. Убедитесь, что запущен backend (uvicorn main_api:app --reload)');
+        }
+    }
+    
+    // ========== ЗАГРУЗКА РАБОТ СТУДЕНТА ==========
+    async function loadStudentWorks(teamId) {
+        try {
+            const response = await fetch(`${API_URL}/works/${teamId}`);
+            const works = await response.json();
+            
+            const container = document.getElementById('studentWorksList');
+            if (!container) return;
+            
+            if (works.length === 0) {
+                container.innerHTML = '<div class="note">Нет работ для вашей команды</div>';
+                return;
+            }
+            
+            let html = '';
+            works.forEach(work => {
+                const statusClass = work.status === 'checked' ? 'status-checked' : 'status-pending';
+                const statusText = work.status === 'checked' ? '✅ Проверена' : '⏳ Не проверена';
+                html += `
+                    <div class="work-card" data-work-id="${work.id}">
+                        <div><strong>${work.name}</strong></div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 8px;">
+                            <span class="status-badge ${statusClass}">${statusText}</span>
+                            ${work.mark ? `<span>⭐ ${work.mark} баллов</span>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+            
+            // Добавляем обработчики кликов
+            document.querySelectorAll('#studentWorksList .work-card').forEach(card => {
+                card.addEventListener('click', async () => {
+                    const workId = parseInt(card.dataset.workId);
+                    await openWorkModal(workId);
+                });
+            });
+            
+        } catch (error) {
+            console.error('Ошибка загрузки работ:', error);
+            document.getElementById('studentWorksList').innerHTML = '<div class="note">Ошибка загрузки работ</div>';
+        }
+    }
+    
+    // ========== ОТКРЫТЬ МОДАЛЬНОЕ ОКНО С КОММЕНТАРИЯМИ ==========
+    async function openWorkModal(projectId) {
+        try {
+            const response = await fetch(`${API_URL}/comments/${projectId}`);
+            const comments = await response.json();
+            
+            const modalBody = document.getElementById('modalBody');
+            document.getElementById('modalTitle').innerText = `Проект #${projectId}`;
+            document.getElementById('exportBtn').style.display = 'none';
+            
+            let commentsHtml = '';
+            if (comments.length === 0) {
+                commentsHtml = '<div class="note">Нет комментариев</div>';
+            } else {
+                commentsHtml = comments.map(c => `
+                    <div class="peer-review">
+                        <strong>💬 Комментарий:</strong><br>${c.comment}
+                        <div class="note" style="margin-top: 4px;">📅 ${new Date(c.created_at).toLocaleString()}</div>
+                    </div>
+                `).join('');
+            }
+            
+            modalBody.innerHTML = `
+                <div><strong>🔗 Ссылка на артефакты:</strong> <span class="note">(будет позже)</span></div>
+                <div style="margin-top: 1rem;"><strong>📝 Комментарии:</strong></div>
+                <div style="margin-top: 0.5rem;">${commentsHtml}</div>
+            `;
+            
+            document.getElementById('workModal').style.display = 'block';
+            
+        } catch (error) {
+            console.error('Ошибка загрузки комментариев:', error);
+            alert('Не удалось загрузить комментарии');
+        }
+    }
+    
+    // ========== ОРГАНИЗАТОР (для демонстрации) ==========
+    function renderOrganizerWorks() {
+        const container = document.getElementById('organizerWorksGrid');
+        container.innerHTML = `
+            <div class="org-work-card">
+                <div class="work-title">📄 Работа 1</div>
+                <div class="date-info">📅 Начало: 2025-04-01</div>
+                <div class="date-info">✅ Окончание: 2025-04-20</div>
+                <div class="status-badge status-checked">✓ Завершена</div>
+            </div>
+            <div class="org-work-card">
+                <div class="work-title">📄 Работа 2</div>
+                <div class="date-info">📅 Начало: 2025-04-10</div>
+                <div class="date-info">✅ Окончание: 2025-04-25</div>
+                <div class="status-badge status-progress">⏳ В процессе</div>
+            </div>
+            <div class="note" style="grid-column: 1/-1; text-align: center;">👆 При нажатии на работу открывается статистика (в разработке)</div>
+        `;
+    }
+    
+    // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
+    function closeModal() {
+        document.getElementById('workModal').style.display = 'none';
+    }
+    
+    function logout() {
+        currentUser = { isLoggedIn: false, role: null, email: null, teamId: null };
+        document.getElementById('appContent').style.display = 'none';
+        document.getElementById('userInfo').innerHTML = '';
+        closeModal();
+    }
+    
+    // ========== НАСТРОЙКА СОБЫТИЙ ==========
+    document.getElementById('loginBtn').onclick = () => login(document.getElementById('emailInput').value);
+    document.querySelector('.close-modal').onclick = closeModal;
+    window.onclick = (e) => { if (e.target.classList.contains('modal')) closeModal(); };
+    
+    const logoutBtn = document.createElement('button');
+    logoutBtn.textContent = 'Выйти';
+    logoutBtn.style.marginLeft = '10px';
+    logoutBtn.onclick = logout;
+    document.querySelector('#authPanel .flex-row').appendChild(logoutBtn);
+    
+    // Стартовое состояние
+    document.getElementById('appContent').style.display = 'none';
+</script>
+</body>
+</html>
