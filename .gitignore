@@ -3,3 +3,4 @@ venv/
 __pycache__/
 .dbeaver/
 .project
+.pytest_cache
