@@ -2,6 +2,7 @@ import asyncio
 from typing import List, Optional, Dict
 from datetime import datetime, timezone
 from api.schemas import *
+from api.models import Team
 
 class MockDatabase:
     def __init__(self):
@@ -16,6 +17,7 @@ class MockDatabase:
         self.comments: List[dict] = []
         self.project_roles: List[dict] = []
         self.participant_teams: List[dict] = []
+        self._pending_adds = []
 
         # Счётчики объектов
         self._counters = {
@@ -195,3 +197,99 @@ class MockDatabase:
         await self.create_user(UserCreate(name="Организатор", email="org@test.ru", code="ORG123", role=UserRoleSystem.ORG, telegram_id=111))
         await self.create_user(UserCreate(name="Эксперт", email="expert@test.ru", code="EXP456", role=UserRoleSystem.EXPERT, telegram_id=222))
         await self.create_user(UserCreate(name="Студент", email="student@test.ru", code="STU789", role=UserRoleSystem.STUDENT, telegram_id=333))
+        
+    def add(self, obj):
+        """Имитирует db.add()"""
+        self._pending_adds.append(obj)
+    
+    async def commit(self):
+        """Имитирует db.commit(): обрабатывает отложенные объекты"""
+        for obj in self._pending_adds:
+            # 🔹 1. TEAM: есть name, но нет email/mode/comment
+            if hasattr(obj, 'name') and not hasattr(obj, 'email') and not hasattr(obj, 'mode') and not hasattr(obj, 'comment'):
+                tid = await self._next_id("team")
+                self.teams[tid] = {"id": tid, "name": obj.name}
+                obj.id = tid  # 👈 Критично: проставляем ID в SQLAlchemy-объект
+                continue
+                
+            # 🔹 2. USER: есть email
+            elif hasattr(obj, 'email'):
+                pydantic_data = UserCreate(
+                    name=obj.name, email=obj.email, code=obj.code,
+                    telegram_id=getattr(obj, 'telegram_id', None),
+                    role=getattr(obj, 'role', 'student'),
+                    team_id=getattr(obj, 'team_id', None)
+                )
+                result = await self.create_user(pydantic_data)
+                obj.id = result.id
+                
+            # 🔹 3. PROJECT: есть mode
+            elif hasattr(obj, 'mode'):
+                # В SQLAlchemy поле называется team_id, в схеме creator_team_id
+                team_id = getattr(obj, 'team_id', None) or getattr(obj, 'creator_team_id', None)
+                pydantic_data = ProjectCreate(
+                    name=obj.name, mode=obj.mode, 
+                    creator_team_id=team_id,
+                    participant_team_ids=[]
+                )
+                result = await self.create_project(pydantic_data)
+                obj.id = result.id
+                
+            # 🔹 4. COMMENT: есть comment
+            elif hasattr(obj, 'comment'):
+                pydantic_data = CommentCreate(
+                    project_id=obj.project_id, 
+                    commentator_id=obj.commentator_id, 
+                    comment=obj.comment
+                )
+                result = await self.add_comment(pydantic_data)
+                obj.id = result.id
+                
+        self._pending_adds.clear()
+        
+    async def refresh(self, obj):
+        """Имитирует db.refresh(): в моке данные уже актуальны"""
+        pass
+
+    async def execute(self, query):
+        from sqlalchemy import Select, Column
+        
+        if isinstance(query, Select):
+            # Определяем, идёт ли запрос к таблице teams
+            if any(Team.__tablename__ in str(c).lower() for c in query.column_descriptions):
+                where = query.whereclause
+                # Извлекаем значение из условия WHERE
+                if where is not None:
+                    # SQLAlchemy 2.0: гдеclause может быть BinaryExpression
+                    if hasattr(where, 'right') and hasattr(where.right, 'value'):
+                        team_id = where.right.value
+                    elif hasattr(where, '_right') and hasattr(where._right, 'value'):  # fallback
+                        team_id = where._right.value
+                    else:
+                        team_id = None
+                    
+                    if team_id and team_id in self.teams:
+                        found = self.teams[team_id]
+                        
+                        class FakeTeam:
+                            def __init__(self, data):
+                                self.id = data['id']
+                                self.name = data['name']
+                        ft = FakeTeam(found)
+                        
+                        class SuccessResult:
+                            def scalar_one_or_none(self_): return ft
+                            def scalars(self_):
+                                class S:
+                                    def all(self__): return [ft]
+                                return S()
+                        return SuccessResult()
+                        
+        # Заглушка для остальных запросов
+        class MockResult:
+            def scalar_one_or_none(self): return None
+            def scalars(self):
+                class S:
+                    def all(self): return []
+                return S()
+        return MockResult()
