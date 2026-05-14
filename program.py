@@ -2,7 +2,7 @@ import asyncio
 import logging
 import os
 import re
-from typing import Dict, List
+from typing import Dict
 from datetime import datetime
 
 from aiogram import Bot, Dispatcher, F
@@ -27,7 +27,7 @@ from dotenv import load_dotenv
 from api.mocker import MockDatabase
 from api.schemas import (
     UserCreate, UserRoleSystem, ProjectCreate, ArtifactCreate,
-    ScoreCreate, CommentCreate, ProjectStatus, ReviewStatus
+    ScoreCreate, CommentCreate,
 )
 
 load_dotenv()
@@ -40,9 +40,10 @@ db = MockDatabase()
 if 1 not in db.teams:
     db.teams[1] = {"id": 1, "name": "Команда Альфа"}
 
-registered_users: Dict[int, dict] = {}  # хранит: email, db_id, role, registered_at
+registered_users: Dict[int, dict] = {}
 org_data: Dict[int, dict] = {}
 
+# Состояния
 class Registration(StatesGroup):
     waiting_for_email = State()
     waiting_for_code = State()
@@ -63,7 +64,6 @@ class StudentSubmission(StatesGroup):
     confirm_submission = State()
 
 class PeerReview(StatesGroup):
-    selecting_project = State()
     waiting_for_score = State()
     waiting_for_comment = State()
     confirm_review = State()
@@ -186,7 +186,7 @@ async def role_choice(message: Message):
     role = message.text
     if role == "👔 Организатор":
         registered_users[message.from_user.id]['role'] = 'org'
-        await message.answer("👔 Роль: Организатор\nВыберите режим:", reply_markup=main_menu_kb())
+        await message.answer("👔 Роль: Организатор\nВыберите режим:", reply_markup=org_mode_kb())
     elif role == "👩‍🏫 Преподаватель":
         registered_users[message.from_user.id]['role'] = 'teacher'
         await teacher_panel(message)
@@ -202,7 +202,17 @@ async def change_role_reply(message: Message):
 
 @dp.message(F.text == "🔙 Назад")
 async def back_to_main(message: Message):
-    await message.answer("Главное меню:", reply_markup=main_menu_kb())
+    user_id = message.from_user.id
+    if user_id not in registered_users:
+        await message.answer("Главное меню:", reply_markup=main_menu_kb())
+        return
+    role = registered_users[user_id].get('role')
+    if role == 'org':
+        await message.answer("Выберите режим:", reply_markup=org_mode_kb())
+    elif role == 'stud':
+        await message.answer("Выберите режим:", reply_markup=student_mode_kb())
+    else:
+        await message.answer("Главное меню:", reply_markup=main_menu_kb())
 
 # ---------------------- Организатор (обработка режимов через Reply) ----------------------
 @dp.message(F.text.in_(["1️⃣ Режим 1", "2️⃣ Режим 2", "3️⃣ Режим 3"]))
@@ -246,8 +256,6 @@ async def student_mode_router(message: Message):
         await student_mode3(message)
 
 # ---------------------- Организатор ----------------------
-
-# Выбор экспертов (1 и 3 режимы)
 @dp.callback_query(F.data.startswith("org_select_experts_"))
 async def select_experts(callback: CallbackQuery, state: FSMContext):
     current_mode = callback.data.replace("org_select_experts_", "")
@@ -261,10 +269,10 @@ async def select_experts(callback: CallbackQuery, state: FSMContext):
     experts_list = org_data[callback.from_user.id]['experts']
     experts_text = ""
     if experts_list:
-        experts_text = "\n\nДобавленные эксперты:\n" + "\n".join([f"• {exp['email']} ({exp['email']})" for exp in experts_list])
+        experts_text = "\n\nДобавленные эксперты:\n" + "\n".join([f"• {exp['email']}" for exp in experts_list])
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✅ Завершить выбор", callback_data="experts_done")],
-        [InlineKeyboardButton(text="⬅️ Назад", callback_data=current_mode)]
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data=f"back_to_org_mode")]
     ])
     await safe_edit(
         callback,
@@ -280,7 +288,7 @@ async def process_expert_email(message: Message, state: FSMContext):
     expert_found = None
     for user_id, user_data in registered_users.items():
         if user_data.get('email', '').lower() == email.lower():
-            expert_found = {'id': user_id, 'email': user_data['email'], 'email': user_data['email']}
+            expert_found = {'id': user_id, 'email': user_data['email']}
             break
     if not expert_found:
         all_users = "\n".join([f"• {data['email']}" for data in registered_users.values()])
@@ -296,7 +304,7 @@ async def process_expert_email(message: Message, state: FSMContext):
     experts_text = "\n".join([f"• {exp['email']}" for exp in experts_list])
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✅ Завершить выбор", callback_data="experts_done")],
-        [InlineKeyboardButton(text="⬅️ Назад", callback_data=org_data[message.from_user.id]['mode'])]
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data=f"back_to_org_mode")]
     ])
     await message.answer(
         f"✅ Эксперт добавлен!\n\n📧 {expert_found['email']}\n\n"
@@ -320,9 +328,9 @@ async def experts_done(callback: CallbackQuery, state: FSMContext):
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="✅ Да, загрузить критерии", callback_data=f"need_criteria_{current_mode}")],
             [InlineKeyboardButton(text="❌ Нет, загрузить только работы", callback_data=f"no_criteria_{current_mode}")],
-            [InlineKeyboardButton(text="⬅️ Назад", callback_data=current_mode)]
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data=f"back_to_org_mode")]
         ])
-        experts_text = "\n".join([f"• {exp['email']} ({exp['email']})" for exp in experts])
+        experts_text = "\n".join([f"• {exp['email']}" for exp in experts])
         await safe_edit(callback,
             f"👥 Выбранные эксперты:\n\n{experts_text}\n\n✅ Выбор экспертов завершен!\n\nТребуется ли загрузить критерии оценки?",
             kb)
@@ -344,7 +352,7 @@ async def no_criteria(callback: CallbackQuery, state: FSMContext):
 async def ask_for_criteria(callback: CallbackQuery, state: FSMContext, current_mode: str):
     await state.update_data(current_mode=current_mode)
     await state.set_state(OrgStates.waiting_for_criteria)
-    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="⬅️ Назад", callback_data=current_mode)]])
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="⬅️ Назад", callback_data=f"back_to_org_mode")]])
     await safe_edit(
         callback,
         f"📋 Загрузка критериев (режим {current_mode.replace('org_', '')})\n\n"
@@ -405,14 +413,14 @@ async def preview_criteria_and_ask(message: Message, state: FSMContext, current_
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="✅ Принять и отправить", callback_data=f"accept_criteria_and_finish_{current_mode}")],
             [InlineKeyboardButton(text="🔄 Загрузить заново", callback_data=f"reload_criteria_{current_mode}")],
-            [InlineKeyboardButton(text="⬅️ Назад", callback_data=current_mode)]
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_org_mode")]
         ])
         await message.answer(f"📋 Предпросмотр критериев:\n\n{preview}\n\n✅ Всё верно? Нажмите 'Принять и отправить'.", reply_markup=kb)
     else:
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="✅ Принять критерии", callback_data=f"accept_criteria_{current_mode}")],
             [InlineKeyboardButton(text="🔄 Загрузить заново", callback_data=f"reload_criteria_{current_mode}")],
-            [InlineKeyboardButton(text="⬅️ Назад", callback_data=current_mode)]
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_org_mode")]
         ])
         await message.answer(f"📋 Предпросмотр критериев:\n\n{preview}\n\n✅ Принять или загрузить заново?", reply_markup=kb)
 
@@ -421,7 +429,7 @@ async def reload_criteria(callback: CallbackQuery, state: FSMContext):
     current_mode = callback.data.replace("reload_criteria_", "")
     await state.update_data(current_mode=current_mode)
     await state.set_state(OrgStates.waiting_for_criteria)
-    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="⬅️ Назад", callback_data=current_mode)]])
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_org_mode")]])
     await safe_edit(callback, "🔄 Повторная загрузка критериев\n\nОтправьте критерии заново (текст, файл или ссылку):", kb)
 
 @dp.callback_query(F.data.startswith("accept_criteria_") & ~F.data.startswith("accept_criteria_and_finish_"))
@@ -442,7 +450,7 @@ async def accept_criteria_and_finish(callback: CallbackQuery, state: FSMContext)
 async def ask_for_work_link(callback: CallbackQuery, state: FSMContext, current_mode: str):
     await state.update_data(current_mode=current_mode)
     await state.set_state(OrgStates.waiting_for_link)
-    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="⬅️ Назад", callback_data=current_mode)]])
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_org_mode")]])
     await safe_edit(
         callback,
         f"🔗 Отправка ссылки на работы\n\nРежим: {current_mode.replace('org_', '')}\n\n"
@@ -466,7 +474,7 @@ async def process_work_link(message: Message, state: FSMContext):
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✅ Принять ссылки", callback_data=f"accept_links_{current_mode}")],
         [InlineKeyboardButton(text="🔄 Отправить заново", callback_data=f"ask_work_link_{current_mode}")],
-        [InlineKeyboardButton(text="⬅️ Назад", callback_data=current_mode)]
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_org_mode")]
     ])
     await message.answer(
         f"🔗 Предпросмотр ссылок:\n\n{links_preview}\n\n✅ Всего ссылок: {len(links)}\n\nПринять или отправить заново?",
@@ -484,14 +492,13 @@ async def ask_work_link_again(callback: CallbackQuery, state: FSMContext):
     current_mode = callback.data.replace("ask_work_link_", "")
     await ask_for_work_link(callback, state, current_mode)
 
-# Финальное подтверждение и создание проекта в БД
 async def final_confirmation(callback: CallbackQuery, state: FSMContext, current_mode: str):
     if callback.from_user.id not in org_data:
         await callback.answer("Данные не найдены!", show_alert=True)
         return
     data = org_data[callback.from_user.id]
     experts = data.get('experts', [])
-    experts_text = "\n".join([f"• {exp['email']} ({exp['email']})" for exp in experts]) if experts else "Не выбраны"
+    experts_text = "\n".join([f"• {exp['email']}" for exp in experts]) if experts else "Не выбраны"
     criteria_text = ""
     if 'criteria' in data and data.get('criteria_accepted', False):
         crit = data['criteria']
@@ -507,7 +514,7 @@ async def final_confirmation(callback: CallbackQuery, state: FSMContext, current
     links_text = "\n".join([f"{i+1}. {link}" for i, link in enumerate(links)]) if links else "Не указаны"
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✅ Окончательно подтвердить", callback_data=f"final_confirm_{current_mode}")],
-        [InlineKeyboardButton(text="⬅️ Назад", callback_data=current_mode)]
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_org_mode")]
     ])
     await safe_edit(
         callback,
@@ -526,33 +533,23 @@ async def final_confirm(callback: CallbackQuery, state: FSMContext):
         await callback.answer("Данные не найдены!", show_alert=True)
         return
     data = org_data[callback.from_user.id]
-    # Создаём проект в БД
     mode_int = int(current_mode.replace("org_", ""))
     project_name = f"Проект от {registered_users[callback.from_user.id]['email']} {asyncio.get_event_loop().time()}"
+
+    participant_ids = [1] if mode_int == 2 else []
     project = await db.create_project(ProjectCreate(
         name=project_name,
         mode=mode_int,
         creator_team_id=1,
-        participant_team_ids=[1]
+        participant_team_ids=participant_ids
     ))
-
-    if 'criteria' in data and data.get('criteria_accepted', False):
-        crit = data['criteria']
-        if crit['type'] == 'text':
-            # Добавляем критерий как запись в БД (для примера)
-            await db.add_criterion(project.id, "Критерии (текст)", 100, 1)
-        elif crit['type'] == 'file':
-            await db.add_criterion(project.id, f"Файл критериев: {crit['content']['file_name']}", 100, 1)
-        elif crit['type'] == 'link':
-            await db.add_criterion(project.id, f"Ссылка на критерии: {crit['content']}", 100, 1)
-    # Уведомляем экспертов (пока просто заглушка)
     del org_data[callback.from_user.id]
     await state.clear()
-    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="⬅️ Назад к режимам", callback_data=current_mode)]])
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="⬅️ Назад к режимам", callback_data="back_to_org_mode")]])
     await safe_edit(callback,
         f"✅ ВСЕ ДАННЫЕ УСПЕШНО ОТПРАВЛЕНЫ!\n\n"
         f"📎 Режим: {current_mode.replace('org_', '')}\n"
-        f"📁 Проект создан с ID {project.id}\n\n"
+        f"📁 Проект создан с ID {project.id} (заглушка)\n\n"
         f"📨 Уведомления отправлены проверяющим.",
         kb)
 
@@ -566,7 +563,7 @@ async def handle_criteria_mode2(callback: CallbackQuery, state: FSMContext):
     org_data[callback.from_user.id]['experts'] = []
     await state.update_data(current_mode=current_mode)
     await state.set_state(OrgStates.waiting_for_criteria)
-    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="⬅️ Назад", callback_data=current_mode)]])
+    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_org_mode")]])
     await safe_edit(
         callback,
         f"📋 Загрузка критериев (режим 2)\n\n"
@@ -578,37 +575,37 @@ async def handle_criteria_mode2(callback: CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data == "org_results")
 async def results(callback: CallbackQuery, state: FSMContext):
     await state.clear()
-    kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="⬅️ Назад", callback_data="org")]])
-    await safe_edit(callback, "📊 Результаты проверки\n\nЗдесь будут отображаться результаты проверки работ", kb)
+    await safe_edit(callback, "📊 Результаты проверки\n\nЗдесь будут отображаться результаты проверки работ (заглушка)", None)
 
-# ---------------------- Эксперт (преподаватель) ----------------------
-async def teacher_panel(message: Message):
-    user_id = message.from_user.id
-    db_user_id = registered_users[user_id]['db_id']
-    pending = await db.get_pending_reviews(db_user_id)
-    if not pending:
-        await message.answer("Нет проектов для проверки.", reply_markup=main_menu_kb())
-        return
-    text = "📋 Проекты для проверки:\n"
-    kb = InlineKeyboardMarkup(inline_keyboard=[])
-    for p in pending:
-        text += f"\n• {p.name} (ID {p.id})"
-        kb.inline_keyboard.append([InlineKeyboardButton(text=p.name, callback_data=f"teacher_review_{p.id}")])
-    await message.answer(text, reply_markup=kb)
-
-@dp.callback_query(F.data.startswith("teacher_review_"))
-async def start_teacher_review(callback: CallbackQuery, state: FSMContext):
-    project_id = int(callback.data.split("_")[-1])
-    await state.update_data(project_id=project_id)
-    await state.set_state(TeacherReview.waiting_for_score)
-    await callback.message.answer("Введите оценку (0-100):", reply_markup=cancel_reply_kb())
+# Кнопка "Назад" для организатора (из любого inline-меню)
+@dp.callback_query(F.data == "back_to_org_mode")
+async def back_to_org_mode(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await callback.message.edit_text("Выберите действие:", reply_markup=None)
+    await callback.message.answer("Режим организатора. Выберите режим:", reply_markup=org_mode_kb())
     await callback.answer()
+
+# ---------------------- Преподаватель (заглушка) ----------------------
+async def teacher_panel(message: Message):
+    await message.answer(
+        "👩‍🏫 Роль: Преподаватель (эксперт)\n\n"
+        "Это тестовый режим. Вы можете выставить оценку и комментарий (без привязки к реальной работе).",
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text="📝 Выставить оценку и комментарий")], [KeyboardButton(text="🔙 Назад")]],
+            resize_keyboard=True
+        )
+    )
+
+@dp.message(F.text == "📝 Выставить оценку и комментарий")
+async def teacher_start_review(message: Message, state: FSMContext):
+    await state.set_state(TeacherReview.waiting_for_score)
+    await message.answer("Введите оценку (0-100):", reply_markup=cancel_reply_kb())
 
 @dp.message(TeacherReview.waiting_for_score, F.text)
 async def teacher_score(message: Message, state: FSMContext):
     if message.text == "❌ Отмена":
         await state.clear()
-        await message.answer("Проверка отменена.", reply_markup=main_menu_kb())
+        await message.answer("Отменено.", reply_markup=main_menu_kb())
         return
     try:
         score = int(message.text.strip())
@@ -625,7 +622,7 @@ async def teacher_score(message: Message, state: FSMContext):
 async def teacher_comment(message: Message, state: FSMContext):
     if message.text == "❌ Отмена":
         await state.clear()
-        await message.answer("Проверка отменена.", reply_markup=main_menu_kb())
+        await message.answer("Отменено.", reply_markup=main_menu_kb())
         return
     comment = message.text.strip()
     await state.update_data(comment=comment)
@@ -654,35 +651,26 @@ async def edit_teacher_comment(callback: CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data == "cancel_teacher_review")
 async def cancel_teacher_review(callback: CallbackQuery, state: FSMContext):
     await state.clear()
-    await callback.message.answer("Проверка отменена.", reply_markup=main_menu_kb())
+    await callback.message.answer("Отменено.", reply_markup=main_menu_kb())
     await callback.answer()
 
 @dp.callback_query(F.data == "confirm_teacher_review")
 async def confirm_teacher_review(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
-    project_id = data['project_id']
-    reviewer_id = registered_users[callback.from_user.id]['db_id']
     score = data['score']
     comment = data['comment']
-    # Сохраняем оценку (критерий 1 – заглушка)
-    await db.add_score(ScoreCreate(project_id=project_id, criterion_id=1, reviewer_id=reviewer_id, score=score))
-    await db.add_comment(CommentCreate(project_id=project_id, commentator_id=reviewer_id, comment=comment))
     await state.clear()
-    await callback.message.answer("✅ Проверка отправлена!", reply_markup=main_menu_kb())
+    await callback.message.answer(
+        f"✅ Оценка и комментарий отправлены!\n\nОценка: {score}\nКомментарий: {comment}\n(заглушка, реальная работа не привязана)",
+        reply_markup=main_menu_kb()
+    )
     await callback.answer()
 
 # ---------------------- Студент ----------------------
 @dp.message(F.text == "1️⃣ Режим 1")
 async def student_mode1(message: Message):
-    projects = await db.get_projects_for_team(team_id=1)
-    if not projects:
-        await message.answer("Нет проектов.")
-        return
-    p = projects[-1]
-    comments = await db.get_comments(p.id)
-    comment_text = "\n".join([f"• {c.comment}" for c in comments]) if comments else "Нет комментариев"
     await message.answer(
-        f"📊 Результаты проверки\n\nПроект: {p.name}\nСтатус: {p.status}\nОценка: {p.mark or '─'}\nКомментарии:\n{comment_text}"
+        "📊 Результаты проверки (заглушка)\n\nВаша работа: 'Аналитика'\nСтатус: проверена\nОценка: 85/100\nКомментарий: Хорошая работа, но есть замечания по оформлению."
     )
 
 @dp.message(F.text == "2️⃣ Режим 2")
@@ -691,60 +679,23 @@ async def student_mode2(message: Message):
 
 @dp.message(F.text == "3️⃣ Режим 3")
 async def student_mode3(message: Message):
-    projects = await db.get_projects_for_team(team_id=1)
-    rating = [(p.name, p.mark) for p in projects if p.mark is not None]
-    rating.sort(key=lambda x: x[1], reverse=True)
-    if not rating:
-        await message.answer("Пока нет оценок.")
-        return
-    text = "🏆 Рейтинг студентов\n\n"
-    for i, (name, mark) in enumerate(rating[:5], 1):
-        text += f"{i}. {name} – {mark} баллов\n"
-    user_email = registered_users[message.from_user.id]['email']
-    user_name = user_email.split('@')[0]
-    for idx, (name, _) in enumerate(rating, 1):
-        if user_name.lower() in name.lower():
-            text += f"\n📊 Ваша позиция: {idx} место"
-            break
-    else:
-        text += "\n📊 Ваша позиция: вне рейтинга"
-    await message.answer(text)
+    await message.answer(
+        "🏆 Рейтинг студентов (заглушка)\n\n1. Dodo Ptizza – 95 баллов\n2. Dodo Bonya – 88 баллов\n3. ООО Тчисление – 76 баллов\n\n📊 Ваша позиция: 2 место"
+    )
 
 @dp.message(F.text == "📊 Статус работы")
 async def student_own_status(message: Message):
-    projects = await db.get_projects_for_team(team_id=1)
-    if not projects:
-        await message.answer("Нет проектов.")
-        return
-    p = projects[-1]
-    comments = await db.get_comments(p.id)
-    comment_text = "\n".join([f"• {c.comment}" for c in comments]) if comments else "Нет комментариев"
     await message.answer(
-        f"📊 Статус работы\n\nПроект: {p.name}\nСтатус: {p.status}\nОценка: {p.mark or '─'}\nКомментарии:\n{comment_text}"
+        "📊 Статус вашей работы (заглушка)\n\nПроект: 'Аналитика'\nСтатус: На проверке\nОценка: не оценено\nКомментарии: нет"
     )
 
 @dp.message(F.text == "👥 Чужие работы")
 async def student_others_works(message: Message, state: FSMContext):
-    projects = await db.get_projects_for_team(team_id=1)
-    if len(projects) <= 1:
-        await message.answer("Нет чужих работ.")
-        return
-    others = projects[:-1]
-    text = "Выберите работу для оценки:\n"
-    kb = InlineKeyboardMarkup(inline_keyboard=[])
-    for p in others:
-        kb.inline_keyboard.append([InlineKeyboardButton(text=p.name, callback_data=f"peer_{p.id}")])
-    await state.set_state(PeerReview.selecting_project)
-    await state.update_data(others=others)
-    await message.answer(text, reply_markup=kb)
-
-@dp.callback_query(PeerReview.selecting_project, F.data.startswith("peer_"))
-async def peer_select(callback: CallbackQuery, state: FSMContext):
-    project_id = int(callback.data.split("_")[1])
-    await state.update_data(peer_project_id=project_id)
     await state.set_state(PeerReview.waiting_for_score)
-    await callback.message.answer("Введите оценку (0-100):", reply_markup=cancel_reply_kb())
-    await callback.answer()
+    await message.answer(
+        "Вы выбрали просмотр чужих работ (заглушка).\nВведите оценку (0-100) для работы студента:",
+        reply_markup=cancel_reply_kb()
+    )
 
 @dp.message(PeerReview.waiting_for_score, F.text)
 async def peer_score(message: Message, state: FSMContext):
@@ -802,14 +753,13 @@ async def cancel_peer_review(callback: CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data == "confirm_peer_review")
 async def confirm_peer_review(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
-    project_id = data['peer_project_id']
-    reviewer_id = registered_users[callback.from_user.id]['db_id']
     score = data['peer_score']
     comment = data['peer_comment']
-    await db.add_score(ScoreCreate(project_id=project_id, criterion_id=1, reviewer_id=reviewer_id, score=score))
-    await db.add_comment(CommentCreate(project_id=project_id, commentator_id=reviewer_id, comment=comment))
     await state.clear()
-    await callback.message.answer("✅ Оценка отправлена!", reply_markup=student_mode2_kb())
+    await callback.message.answer(
+        f"✅ Оценка отправлена!\n\nОценка: {score}\nКомментарий: {comment}\n(заглушка, реальная работа не привязана)",
+        reply_markup=student_mode2_kb()
+    )
     await callback.answer()
 
 @dp.message(F.text == "📤 Отправить работу")
