@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>УрФУ | Студент + Организатор (с API)</title>
+    <title>УрФУ | Студент + Организатор (полная версия)</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -57,6 +57,20 @@
         .tab-content { display: none; background: white; border-radius: 24px; padding: 1.5rem; border: 1px solid #e2e8f0; }
         .tab-content.active { display: block; }
         
+        /* Поиск */
+        .search-bar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .search-bar input, .search-bar select {
+            padding: 0.5rem 1rem;
+            border-radius: 40px;
+            border: 1px solid #cbd5e1;
+        }
+        
+        /* Работы (студент) */
         .works-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -84,6 +98,38 @@
         .status-checked { background: #dcfce7; color: #166534; }
         .status-pending { background: #fff3cd; color: #856404; }
         
+        /* Организатор: плитки работ */
+        .org-works-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .org-work-card {
+            background: #f8fafc;
+            padding: 1rem;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            cursor: pointer;
+            transition: 0.1s ease;
+        }
+        .org-work-card:hover {
+            border-color: #3b82f6;
+            background: #fafcff;
+        }
+        .work-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+        .date-info {
+            font-size: 0.8rem;
+            color: #475569;
+            margin-top: 0.5rem;
+        }
+        .status-completed { background: #dcfce7; color: #166534; }
+        .status-progress { background: #fff3cd; color: #856404; }
+        
+        /* Модальное окно */
         .modal {
             display: none;
             position: fixed;
@@ -97,12 +143,12 @@
         }
         .modal-content {
             background: white;
-            margin: 10% auto;
+            margin: 5% auto;
             width: 90%;
-            max-width: 600px;
+            max-width: 900px;
             border-radius: 28px;
             padding: 1.5rem;
-            max-height: 80vh;
+            max-height: 85vh;
             overflow-y: auto;
         }
         .close-modal {
@@ -113,13 +159,50 @@
         }
         .close-modal:hover { color: #1e293b; }
         
+        .score {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #1e40af;
+        }
         .peer-review {
             background: #f1f5f9;
             padding: 0.8rem;
             border-radius: 16px;
             margin-bottom: 0.8rem;
         }
-        .note { font-size: 0.8rem; color: #475569; margin-top: 0.8rem; }
+        .stats-summary {
+            background: #eef2ff;
+            padding: 1rem;
+            border-radius: 20px;
+            margin-bottom: 1rem;
+        }
+        .export-btn {
+            background: #1e40af;
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 40px;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        th, td {
+            padding: 0.8rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        th {
+            background: #f1f5f9;
+        }
+        .note {
+            font-size: 0.8rem;
+            color: #475569;
+            margin-top: 0.8rem;
+        }
         .team-name {
             background: #eef2ff;
             display: inline-block;
@@ -127,25 +210,6 @@
             border-radius: 50px;
             margin-bottom: 1rem;
         }
-        .org-works-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-        .org-work-card {
-            background: #f8fafc;
-            padding: 1rem;
-            border-radius: 16px;
-            border: 1px solid #e2e8f0;
-            cursor: pointer;
-        }
-        .org-work-card:hover { border-color: #3b82f6; background: #fafcff; }
-        .stats-summary { background: #eef2ff; padding: 1rem; border-radius: 20px; margin-bottom: 1rem; }
-        .export-btn { background: #1e40af; color: white; border: none; padding: 0.6rem 1.2rem; border-radius: 40px; cursor: pointer; margin-top: 1rem; }
-        table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
-        th, td { padding: 0.8rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
-        th { background: #f1f5f9; }
     </style>
 </head>
 <body>
@@ -158,17 +222,38 @@
                     <input type="email" id="emailInput" placeholder="student@example.com" value="student@example.com">
                     <button id="loginBtn" class="primary">Войти</button>
                 </div>
-                <div class="note">📧 student@example.com | beta@example.com (студенты)<br>org@example.com (организатор)</div>
+                <div class="note">📧 student@example.com | beta@example.com | gamma@example.com (студенты)<br>org@example.com (организатор)</div>
             </div>
             <div id="userInfo"></div>
         </div>
     </div>
 
     <div id="appContent" style="display: none;">
+        <!-- СТУДЕНТ -->
         <div id="studentView" style="display: none;">
             <div id="studentTeamName" class="team-name"></div>
-            <div id="studentWorksList" class="works-grid"></div>
+            
+            <div class="tabs" id="studentMainTabs">
+                <button class="tab-btn active" data-tab="expertTab">⭐ Режим 1: Экспертная оценка</button>
+                <button class="tab-btn" data-tab="peerTab">👥 Режим 2: Взаимопроверка</button>
+            </div>
+            
+            <div id="expertTab" class="tab-content active">
+                <div class="search-bar">
+                    <input type="text" id="searchTitle" placeholder="Поиск по названию...">
+                    <input type="date" id="searchDate" placeholder="Поиск по дате">
+                    <button id="clearSearch">Сбросить</button>
+                </div>
+                <div id="expertWorksList" class="works-grid"></div>
+            </div>
+            
+            <div id="peerTab" class="tab-content">
+                <div id="peerWorksList" class="works-grid"></div>
+                <div class="note">👥 Здесь отображаются комментарии от других студентов к работам вашей команды.</div>
+            </div>
         </div>
+        
+        <!-- ОРГАНИЗАТОР (новая версия с работами, датами, выгрузкой) -->
         <div id="organizerView" style="display: none;">
             <h2>📊 Контроль проверки работ</h2>
             <div id="organizerWorksGrid" class="org-works-grid"></div>
@@ -176,178 +261,420 @@
     </div>
 </div>
 
+<!-- Модальное окно -->
 <div id="workModal" class="modal">
     <div class="modal-content">
         <span class="close-modal">&times;</span>
         <h3 id="modalTitle"></h3>
         <div id="modalBody"></div>
-        <button id="exportBtn" class="export-btn" style="display: none;">📥 Выгрузить CSV</button>
+        <button id="exportBtn" class="export-btn" style="display: none;">📥 Выгрузить таблицу работ (CSV)</button>
     </div>
 </div>
 
 <script>
-    // ========== ПОДКЛЮЧЕНИЕ К API ==========
-    const API_URL = 'http://localhost:8000/api';
+    // ========== НОВЫЕ НАЗВАНИЯ РАБОТ ==========
+    const CUSTOM_NAMES = [
+        "Аналитика. Первая версия",
+        "Аналитика. Вторая версия",
+        "Сценарий. Первая версия",
+        "Сценарий. Вторая версия",
+        "Дизайн. Первая версия",
+        "Дизайн. Вторая версия",
+        "Работа тимлида. Первая версия",
+        "Работа тимлида. Вторая версия",
+        "Работа разработчика. Первая версия",
+        "Работа разработчика. Вторая версия"
+    ];
+    
+    // Функция замены названия по индексу или ID
+    function replaceWorkName(originalName, id) {
+        // Если ID от 1 до 10, заменяем на новое название
+        if (id >= 1 && id <= CUSTOM_NAMES.length) {
+            return CUSTOM_NAMES[id - 1];
+        }
+        // Иначе оставляем как есть
+        return originalName;
+    }
+    
+    // ========== БАЗА ДАННЫХ ==========
+    const TEAMS = [
+        { id: 1, name: "Команда «Альфа»", emailAlias: "student" },
+        { id: 2, name: "Команда «Бета»", emailAlias: "beta" },
+        { id: 3, name: "Команда «Гамма»", emailAlias: "gamma" }
+    ];
+    
+    // ЭКСПЕРТНАЯ оценка (для студента) — применяем замену названий
+    const WORKS_EXPERT = {
+        1: [
+            { id: 1, workNumber: 1, title: replaceWorkName("Работа 1", 1), role: "Аналитик", link: "https://drive.google.com/alpha/work1", score: 85, comment: "✅ Отлично! Анализ полный, но можно глубже.", isChecked: true, submittedAt: "2025-04-20" },
+            { id: 2, workNumber: 2, title: replaceWorkName("Работа 2", 2), role: "Тимлид", link: "https://drive.google.com/alpha/work2", score: 70, comment: "⚠️ Хорошо, но не хватает сроков.", isChecked: false, submittedAt: "2025-04-21" },
+            { id: 3, workNumber: 3, title: replaceWorkName("Работа 3", 3), role: "Разработчик", link: "https://drive.google.com/alpha/work3", score: 0, comment: "⏳ Ожидает проверки", isChecked: false, submittedAt: "2025-04-22" }
+        ],
+        2: [
+            { id: 4, workNumber: 1, title: replaceWorkName("Работа 1", 4), role: "Аналитик", link: "https://drive.google.com/beta/work1", score: 92, comment: "✅ Отличная работа!", isChecked: true, submittedAt: "2025-04-20" },
+            { id: 5, workNumber: 2, title: replaceWorkName("Работа 2", 5), role: "Тимлид", link: "https://drive.google.com/beta/work2", score: 88, comment: "✅ Принято", isChecked: true, submittedAt: "2025-04-21" }
+        ],
+        3: [
+            { id: 6, workNumber: 1, title: replaceWorkName("Работа 1", 6), role: "Аналитик", link: "https://drive.google.com/gamma/work1", score: 45, comment: "❌ Требуется переделка", isChecked: false, submittedAt: "2025-04-19" },
+            { id: 7, workNumber: 2, title: replaceWorkName("Работа 2", 7), role: "Тимлид", link: "https://drive.google.com/gamma/work2", score: 60, comment: "⚠️ Нужно доработать", isChecked: false, submittedAt: "2025-04-20" }
+        ]
+    };
+    
+    // ВЗАИМОПРОВЕРКА (для студента)
+    const PEER_REVIEWS = {
+        1: [{ studentName: "Мария", comment: "Хорошая работа, но можно лучше оформить." }, { studentName: "Алексей", comment: "Согласен, анализ логичный." }],
+        2: [{ studentName: "Дмитрий", comment: "План чёткий, молодец!" }],
+        4: [{ studentName: "Екатерина", comment: "Отлично, всё понятно." }, { studentName: "Павел", comment: "Добавил бы графики." }],
+        5: [{ studentName: "Ольга", comment: "Тимлид хороший, всё по срокам." }],
+        6: [{ studentName: "Иван", comment: "Много ошибок, переделайте." }],
+        7: [{ studentName: "Светлана", comment: "Неплохо, но можно улучшить." }]
+    };
+    
+    // ========== ДАННЫЕ ДЛЯ ОРГАНИЗАТОРА ==========
+    // Список работ (тем) — с новыми названиями
+    const WORK_TOPICS = [
+        { id: 1, name: replaceWorkName("Работа 1", 1), startDate: "2025-04-01", endDate: "2025-04-20" },
+        { id: 2, name: replaceWorkName("Работа 2", 2), startDate: "2025-04-10", endDate: "2025-04-25" },
+        { id: 3, name: replaceWorkName("Работа 3", 3), startDate: "2025-04-15", endDate: "2025-05-01" },
+        { id: 4, name: replaceWorkName("Работа 4", 4), startDate: "2025-04-20", endDate: "2025-05-05" },
+        { id: 5, name: replaceWorkName("Работа 5", 5), startDate: "2025-04-25", endDate: "2025-05-10" }
+    ];
+    
+    // Результаты работ по командам (баллы и комментарии от эксперта)
+    const WORK_RESULTS = {
+        1: {
+            1: { score: 85, comment: "✅ Отличный анализ, но можно глубже.", checkedBy: "Елена Викторовна", checkedAt: "2025-04-15" },
+            2: { score: 92, comment: "✅ Отличная работа!", checkedBy: "Елена Викторовна", checkedAt: "2025-04-16" },
+            3: { score: 45, comment: "❌ Требуется переделка.", checkedBy: "Дмитрий Сергеевич", checkedAt: "2025-04-14" },
+            4: { score: 78, comment: "⚠️ Хорошо, но есть недочёты.", checkedBy: "Анна Игоревна", checkedAt: "2025-04-18" }
+        },
+        2: {
+            1: { score: 70, comment: "⚠️ Не хватает сроков.", checkedBy: "Елена Викторовна", checkedAt: "2025-04-22" },
+            2: { score: 88, comment: "✅ Принято.", checkedBy: "Дмитрий Сергеевич", checkedAt: "2025-04-23" },
+            3: { score: 60, comment: "⚠️ Нужно доработать.", checkedBy: "Анна Игоревна", checkedAt: "2025-04-21" },
+            4: { score: 95, comment: "✅ Отлично!", checkedBy: "Елена Викторовна", checkedAt: "2025-04-24" }
+        },
+        3: {
+            1: { score: 0, comment: "⏳ Ожидает проверки", checkedBy: null, checkedAt: null },
+            2: { score: 75, comment: "📝 Принято с замечаниями.", checkedBy: "Дмитрий Сергеевич", checkedAt: "2025-04-28" },
+            3: { score: 0, comment: "⏳ Ожидает проверки", checkedBy: null, checkedAt: null },
+            4: { score: 82, comment: "✅ Хорошо.", checkedBy: "Анна Игоревна", checkedAt: "2025-04-29" }
+        },
+        4: {
+            1: { score: 0, comment: "⏳ Ожидает проверки", checkedBy: null, checkedAt: null },
+            2: { score: 0, comment: "⏳ Ожидает проверки", checkedBy: null, checkedAt: null },
+            3: { score: 0, comment: "⏳ Ожидает проверки", checkedBy: null, checkedAt: null },
+            4: { score: 0, comment: "⏳ Ожидает проверки", checkedBy: null, checkedAt: null }
+        },
+        5: {
+            1: { score: 0, comment: "⏳ Ожидает проверки", checkedBy: null, checkedAt: null },
+            2: { score: 0, comment: "⏳ Ожидает проверки", checkedBy: null, checkedAt: null },
+            3: { score: 0, comment: "⏳ Ожидает проверки", checkedBy: null, checkedAt: null },
+            4: { score: 0, comment: "⏳ Ожидает проверки", checkedBy: null, checkedAt: null }
+        }
+    };
+    
+    const ALL_TEACHERS = ["Елена Викторовна", "Дмитрий Сергеевич", "Анна Игоревна"];
     
     let currentUser = { isLoggedIn: false, role: null, email: null, teamId: null, teamName: null };
     
-    // ========== ВХОД ==========
-    async function login(email) {
-        if (!email || !email.includes('@')) {
-            alert('Введите корректный email');
-            return;
+    // ========== СТУДЕНТ: РЕЖИМ 1 (ЭКСПЕРТ) ==========
+    function renderExpertMode() {
+        const works = WORKS_EXPERT[currentUser.teamId] || [];
+        let filtered = [...works];
+        
+        const searchTitle = document.getElementById('searchTitle')?.value.toLowerCase() || '';
+        const searchDate = document.getElementById('searchDate')?.value || '';
+        
+        if (searchTitle) filtered = filtered.filter(w => w.title.toLowerCase().includes(searchTitle));
+        if (searchDate) filtered = filtered.filter(w => w.submittedAt === searchDate);
+        
+        const container = document.getElementById('expertWorksList');
+        if (!container) return;
+        
+        let html = '';
+        filtered.forEach(work => {
+            const statusClass = work.isChecked ? 'status-checked' : 'status-pending';
+            const statusText = work.isChecked ? '✅ Проверена' : '⏳ Не проверена';
+            html += `
+                <div class="work-card" data-work='${JSON.stringify({ ...work, mode: 'expert' })}'>
+                    <div><strong>${work.title}</strong> (${work.role})</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                        <span class="status-badge ${statusClass}">${statusText}</span>
+                        <span>📅 ${work.submittedAt}</span>
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html || '<div class="note">Работ не найдено</div>';
+        
+        document.querySelectorAll('#expertWorksList .work-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const work = JSON.parse(card.dataset.work);
+                openExpertModal(work);
+            });
+        });
+    }
+    
+    function openExpertModal(work) {
+        const modalBody = document.getElementById('modalBody');
+        document.getElementById('modalTitle').innerText = work.title;
+        document.getElementById('exportBtn').style.display = 'none';
+        modalBody.innerHTML = `
+            <div style="background:#f1f5f9; padding:0.8rem; border-radius:16px; margin:0.5rem 0;">
+                <strong>👤 Роль:</strong> ${work.role}
+            </div>
+            <div><strong>🔗 Ссылка:</strong> <a href="${work.link}" target="_blank">Открыть Google Диск</a></div>
+            <div style="margin-top: 1rem;">
+                <strong>⭐ Оценка эксперта:</strong> <span class="score">${work.score} баллов</span>
+            </div>
+            <div style="margin-top: 0.5rem;">
+                <strong>💬 Комментарий эксперта:</strong><br>
+                <div style="background:#f1f5f9; padding:0.8rem; border-radius:16px; margin-top: 0.3rem;">${work.comment}</div>
+            </div>
+        `;
+        document.getElementById('workModal').style.display = 'block';
+    }
+    
+    // ========== СТУДЕНТ: РЕЖИМ 2 (ВЗАИМОПРОВЕРКА) ==========
+    function renderPeerMode() {
+        const works = WORKS_EXPERT[currentUser.teamId] || [];
+        const container = document.getElementById('peerWorksList');
+        if (!container) return;
+        
+        let html = '';
+        works.forEach(work => {
+            const peerReviews = PEER_REVIEWS[work.id] || [];
+            const hasReviews = peerReviews.length > 0;
+            html += `
+                <div class="work-card" data-work-id="${work.id}" data-work-title="${work.title}" data-work-role="${work.role}" data-reviews='${JSON.stringify(peerReviews)}'>
+                    <div><strong>${work.title}</strong> (${work.role})</div>
+                    <div style="margin-top: 8px;">
+                        <span class="status-badge ${hasReviews ? 'status-checked' : 'status-pending'}">
+                            ${hasReviews ? `📝 ${peerReviews.length} комментариев` : 'Нет комментариев'}
+                        </span>
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html || '<div class="note">Нет работ для взаимопроверки</div>';
+        
+        document.querySelectorAll('#peerWorksList .work-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const workId = parseInt(card.dataset.workId);
+                const workTitle = card.dataset.workTitle;
+                const workRole = card.dataset.workRole;
+                const reviews = JSON.parse(card.dataset.reviews);
+                openPeerModal(workTitle, workRole, reviews);
+            });
+        });
+    }
+    
+    function openPeerModal(title, role, reviews) {
+        const modalBody = document.getElementById('modalBody');
+        document.getElementById('modalTitle').innerText = title;
+        document.getElementById('exportBtn').style.display = 'none';
+        
+        let reviewsHtml = '';
+        if (reviews.length === 0) {
+            reviewsHtml = '<div class="note">Нет комментариев от других студентов</div>';
+        } else {
+            reviewsHtml = reviews.map(r => `
+                <div class="peer-review">
+                    <strong>👨‍🎓 ${r.studentName}:</strong><br>${r.comment}
+                </div>
+            `).join('');
         }
         
-        try {
-            // Вызываем API
-            const response = await fetch(`${API_URL}/login?email=${encodeURIComponent(email)}`);
-            
-            if (!response.ok) {
-                const error = await response.json();
-                alert(error.detail || 'Ошибка входа');
-                return;
-            }
-            
-            const user = await response.json();
-            
-            if (user.role === 'org') {
-                // Организатор
-                currentUser = { isLoggedIn: true, role: 'organizer', email, id: user.id };
-                document.getElementById('studentView').style.display = 'none';
-                document.getElementById('organizerView').style.display = 'block';
-                renderOrganizerWorks();
-                
-            } else if (user.role === 'student') {
-                // Студент
-                currentUser = { 
-                    isLoggedIn: true, 
-                    role: 'student', 
-                    email, 
-                    teamId: user.team_id, 
-                    teamName: user.team_name,
-                    userId: user.id 
-                };
-                
-                document.getElementById('studentView').style.display = 'block';
-                document.getElementById('organizerView').style.display = 'none';
-                document.getElementById('studentTeamName').innerText = `🏆 ${user.team_name || 'Без команды'}`;
-                
-                // Загружаем работы команды
-                await loadStudentWorks(currentUser.teamId);
-            }
-            
-            document.getElementById('appContent').style.display = 'block';
-            document.getElementById('userInfo').innerHTML = `<span>✅ ${email} <span class="role-badge">${currentUser.role === 'student' ? 'Студент' : 'Организатор'}</span></span>`;
-            
-        } catch (error) {
-            console.error('Ошибка:', error);
-            alert('Не удалось подключиться к серверу. Убедитесь, что запущен backend (uvicorn main_api:app --reload)');
-        }
+        modalBody.innerHTML = `
+            <div style="background:#f1f5f9; padding:0.8rem; border-radius:16px; margin:0.5rem 0;">
+                <strong>👤 Роль:</strong> ${role}
+            </div>
+            <div><strong>💬 Комментарии от студентов (взаимопроверка):</strong></div>
+            <div style="margin-top: 0.5rem;">${reviewsHtml}</div>
+            <div class="note" style="margin-top: 1rem;">📌 Эту же работу проверяет и эксперт — результаты в режиме 1.</div>
+        `;
+        document.getElementById('workModal').style.display = 'block';
     }
     
-    // ========== ЗАГРУЗКА РАБОТ СТУДЕНТА ==========
-    async function loadStudentWorks(teamId) {
-        try {
-            const response = await fetch(`${API_URL}/works/${teamId}`);
-            const works = await response.json();
-            
-            const container = document.getElementById('studentWorksList');
-            if (!container) return;
-            
-            if (works.length === 0) {
-                container.innerHTML = '<div class="note">Нет работ для вашей команды</div>';
-                return;
-            }
-            
-            let html = '';
-            works.forEach(work => {
-                const statusClass = work.status === 'checked' ? 'status-checked' : 'status-pending';
-                const statusText = work.status === 'checked' ? '✅ Проверена' : '⏳ Не проверена';
-                html += `
-                    <div class="work-card" data-work-id="${work.id}">
-                        <div><strong>${work.name}</strong></div>
-                        <div style="display: flex; justify-content: space-between; margin-top: 8px;">
-                            <span class="status-badge ${statusClass}">${statusText}</span>
-                            ${work.mark ? `<span>⭐ ${work.mark} баллов</span>` : ''}
-                        </div>
-                    </div>
-                `;
-            });
-            container.innerHTML = html;
-            
-            // Добавляем обработчики кликов
-            document.querySelectorAll('#studentWorksList .work-card').forEach(card => {
-                card.addEventListener('click', async () => {
-                    const workId = parseInt(card.dataset.workId);
-                    await openWorkModal(workId);
-                });
-            });
-            
-        } catch (error) {
-            console.error('Ошибка загрузки работ:', error);
-            document.getElementById('studentWorksList').innerHTML = '<div class="note">Ошибка загрузки работ</div>';
-        }
-    }
-    
-    // ========== ОТКРЫТЬ МОДАЛЬНОЕ ОКНО С КОММЕНТАРИЯМИ ==========
-    async function openWorkModal(projectId) {
-        try {
-            const response = await fetch(`${API_URL}/comments/${projectId}`);
-            const comments = await response.json();
-            
-            const modalBody = document.getElementById('modalBody');
-            document.getElementById('modalTitle').innerText = `Проект #${projectId}`;
-            document.getElementById('exportBtn').style.display = 'none';
-            
-            let commentsHtml = '';
-            if (comments.length === 0) {
-                commentsHtml = '<div class="note">Нет комментариев</div>';
-            } else {
-                commentsHtml = comments.map(c => `
-                    <div class="peer-review">
-                        <strong>💬 Комментарий:</strong><br>${c.comment}
-                        <div class="note" style="margin-top: 4px;">📅 ${new Date(c.created_at).toLocaleString()}</div>
-                    </div>
-                `).join('');
-            }
-            
-            modalBody.innerHTML = `
-                <div><strong>🔗 Ссылка на артефакты:</strong> <span class="note">(будет позже)</span></div>
-                <div style="margin-top: 1rem;"><strong>📝 Комментарии:</strong></div>
-                <div style="margin-top: 0.5rem;">${commentsHtml}</div>
-            `;
-            
-            document.getElementById('workModal').style.display = 'block';
-            
-        } catch (error) {
-            console.error('Ошибка загрузки комментариев:', error);
-            alert('Не удалось загрузить комментарии');
-        }
-    }
-    
-    // ========== ОРГАНИЗАТОР (для демонстрации) ==========
+    // ========== ОРГАНИЗАТОР ==========
     function renderOrganizerWorks() {
         const container = document.getElementById('organizerWorksGrid');
-        container.innerHTML = `
-            <div class="org-work-card">
-                <div class="work-title">📄 Работа 1</div>
-                <div class="date-info">📅 Начало: 2025-04-01</div>
-                <div class="date-info">✅ Окончание: 2025-04-20</div>
-                <div class="status-badge status-checked">✓ Завершена</div>
-            </div>
-            <div class="org-work-card">
-                <div class="work-title">📄 Работа 2</div>
-                <div class="date-info">📅 Начало: 2025-04-10</div>
-                <div class="date-info">✅ Окончание: 2025-04-25</div>
-                <div class="status-badge status-progress">⏳ В процессе</div>
-            </div>
-            <div class="note" style="grid-column: 1/-1; text-align: center;">👆 При нажатии на работу открывается статистика (в разработке)</div>
-        `;
+        let html = '';
+        
+        WORK_TOPICS.forEach(work => {
+            const results = WORK_RESULTS[work.id] || {};
+            const totalTeams = TEAMS.length;
+            let checkedCount = 0;
+            for (let team of TEAMS) {
+                if (results[team.id] && results[team.id].score > 0) checkedCount++;
+            }
+            const isCompleted = checkedCount === totalTeams;
+            
+            html += `
+                <div class="org-work-card" data-work-id="${work.id}">
+                    <div class="work-title">📄 ${work.name}</div>
+                    <div class="date-info">📅 Начало: ${work.startDate}</div>
+                    <div class="date-info">✅ Окончание: ${work.endDate}</div>
+                    <div class="status-badge ${isCompleted ? 'status-completed' : 'status-progress'}">
+                        ${isCompleted ? '✓ Проверка завершена' : `⏳ Проверено ${checkedCount}/${totalTeams}`}
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+        
+        document.querySelectorAll('.org-work-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const workId = parseInt(card.dataset.workId);
+                openWorkModal(workId);
+            });
+        });
     }
     
-    // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
-    function closeModal() {
-        document.getElementById('workModal').style.display = 'none';
+    function openWorkModal(workId) {
+        const work = WORK_TOPICS.find(w => w.id === workId);
+        const results = WORK_RESULTS[workId] || {};
+        
+        const totalTeams = TEAMS.length;
+        let checkedCount = 0;
+        let lastCheckedAt = null;
+        
+        for (let team of TEAMS) {
+            if (results[team.id] && results[team.id].score > 0) {
+                checkedCount++;
+                const checkedAt = results[team.id].checkedAt;
+                if (checkedAt && (!lastCheckedAt || checkedAt > lastCheckedAt)) {
+                    lastCheckedAt = checkedAt;
+                }
+            }
+        }
+        
+        const teacherStats = {};
+        ALL_TEACHERS.forEach(teacher => { teacherStats[teacher] = 0; });
+        
+        for (let team of TEAMS) {
+            const res = results[team.id];
+            if (res && res.checkedBy && res.score > 0) {
+                teacherStats[res.checkedBy] = (teacherStats[res.checkedBy] || 0) + 1;
+            }
+        }
+        
+        const csvData = [];
+        for (let team of TEAMS) {
+            const res = results[team.id] || { score: 0, comment: "Не проверено", checkedBy: "—", checkedAt: "—" };
+            csvData.push({
+                teamId: team.id,
+                teamName: team.name,
+                score: res.score,
+                comment: res.comment,
+                checkedBy: res.checkedBy || "—",
+                checkedAt: res.checkedAt || "—"
+            });
+        }
+        
+        document.getElementById('modalTitle').innerText = work.name;
+        
+        let teachersTableHtml = `<table><thead><tr><th>Имя преподавателя</th><th>Количество проверенных работ</th></tr></thead><tbody>`;
+        for (let [teacher, count] of Object.entries(teacherStats)) {
+            teachersTableHtml += `<tr><td>${teacher}</td><td>${count}</td></tr>`;
+        }
+        teachersTableHtml += `</tbody></table>`;
+        
+        const modalBody = document.getElementById('modalBody');
+        modalBody.innerHTML = `
+            <div class="stats-summary">
+                <strong>📊 Общая статистика:</strong><br>
+                Всего работ: ${totalTeams}<br>
+                Проверено: ${checkedCount}<br>
+                Осталось: ${totalTeams - checkedCount}
+            </div>
+            <h4>👥 Преподаватели</h4>
+            ${teachersTableHtml}
+            <div style="margin-top: 1rem;">
+                <strong>📅 Дата последней проверки:</strong> ${lastCheckedAt || '—'}
+            </div>
+        `;
+        
+        const exportBtn = document.getElementById('exportBtn');
+        exportBtn.style.display = 'block';
+        exportBtn.onclick = () => exportToCSV(work.name, csvData);
+        
+        document.getElementById('workModal').style.display = 'block';
+    }
+    
+    function exportToCSV(workName, data) {
+        const headers = ['ID команды', 'Название команды', 'Баллы', 'Комментарий эксперта', 'Проверил', 'Дата проверки'];
+        const rows = data.map(item => [item.teamId, item.teamName, item.score, item.comment, item.checkedBy, item.checkedAt]);
+        const csvContent = [headers, ...rows].map(row => row.join(';')).join('\n');
+        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.href = url;
+        link.setAttribute('download', `${workName}_результаты.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+    
+    // ========== АВТОРИЗАЦИЯ ==========
+    function getTeamIdByEmail(email) {
+        if (email.includes('beta')) return 2;
+        if (email.includes('gamma')) return 3;
+        return 1;
+    }
+    
+    function attachStudentTabs() {
+        const btns = document.querySelectorAll('#studentMainTabs .tab-btn');
+        const contents = document.querySelectorAll('#studentView .tab-content');
+        btns.forEach(btn => {
+            btn.onclick = () => {
+                const tabId = btn.dataset.tab;
+                contents.forEach(c => c.classList.remove('active'));
+                document.getElementById(tabId).classList.add('active');
+                btns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                if (tabId === 'expertTab') renderExpertMode();
+                if (tabId === 'peerTab') renderPeerMode();
+            };
+        });
+    }
+    
+    function closeModal() { document.getElementById('workModal').style.display = 'none'; }
+    
+    function login(email) {
+        if (!email || !email.includes('@')) { alert('Введите корректный email'); return; }
+        
+        if (email === 'org@example.com') {
+            currentUser = { isLoggedIn: true, role: 'organizer', email };
+            document.getElementById('studentView').style.display = 'none';
+            document.getElementById('organizerView').style.display = 'block';
+            renderOrganizerWorks();
+        } else {
+            const teamId = getTeamIdByEmail(email);
+            const team = TEAMS.find(t => t.id === teamId);
+            currentUser = { isLoggedIn: true, role: 'student', email, teamId, teamName: team.name };
+            document.getElementById('studentView').style.display = 'block';
+            document.getElementById('organizerView').style.display = 'none';
+            document.getElementById('studentTeamName').innerText = `🏆 ${team.name}`;
+            renderExpertMode();
+            renderPeerMode();
+            attachStudentTabs();
+            
+            const searchInput = document.getElementById('searchTitle');
+            const dateInput = document.getElementById('searchDate');
+            const clearBtn = document.getElementById('clearSearch');
+            if (searchInput) searchInput.oninput = () => renderExpertMode();
+            if (dateInput) dateInput.onchange = () => renderExpertMode();
+            if (clearBtn) clearBtn.onclick = () => {
+                if (searchInput) searchInput.value = '';
+                if (dateInput) dateInput.value = '';
+                renderExpertMode();
+            };
+        }
+        document.getElementById('appContent').style.display = 'block';
+        document.getElementById('userInfo').innerHTML = `<span>✅ ${email} <span class="role-badge">${currentUser.role === 'student' ? 'Студент' : 'Организатор'}</span></span>`;
     }
     
     function logout() {
@@ -357,7 +684,6 @@
         closeModal();
     }
     
-    // ========== НАСТРОЙКА СОБЫТИЙ ==========
     document.getElementById('loginBtn').onclick = () => login(document.getElementById('emailInput').value);
     document.querySelector('.close-modal').onclick = closeModal;
     window.onclick = (e) => { if (e.target.classList.contains('modal')) closeModal(); };
@@ -368,8 +694,7 @@
     logoutBtn.onclick = logout;
     document.querySelector('#authPanel .flex-row').appendChild(logoutBtn);
     
-    // Стартовое состояние
-    document.getElementById('appContent').style.display = 'none';
+    logout();
 </script>
 </body>
 </html>
