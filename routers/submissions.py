@@ -18,10 +18,9 @@ from api.schemas import (
 
 submissions_router = APIRouter(prefix="/submissions", tags=["submissions"])
 
-# ✅ CREATE (Организатор загружает работу команды)
+# CREATE (Организатор загружает работу команды)
 @submissions_router.post("/", response_model=SubmissionRead, status_code=status.HTTP_201_CREATED)
 async def create_submission(data: SubmissionCreate, db: AsyncSession = Depends(get_db)):
-    # 1. Базовые проверки существования
     project = await db.get(Project, data.project_id)
     if not project:
         raise HTTPException(404, "Project not found")
@@ -29,7 +28,6 @@ async def create_submission(data: SubmissionCreate, db: AsyncSession = Depends(g
     if not team:
         raise HTTPException(404, "Team not found")
 
-    # 2. Валидация для Режима 2: команда должна быть явно допущена
     if project.mode == 2:
         allowed = await db.execute(select(ProjectTeam).where(
             ProjectTeam.project_id == data.project_id,
@@ -38,7 +36,6 @@ async def create_submission(data: SubmissionCreate, db: AsyncSession = Depends(g
         if not allowed.scalar_one_or_none():
             raise HTTPException(400, "Team is not authorized to submit to this restricted project")
 
-    # 3. Создание записи
     new_sub = Submission(**data.model_dump())
     db.add(new_sub)
 
@@ -52,7 +49,7 @@ async def create_submission(data: SubmissionCreate, db: AsyncSession = Depends(g
 
     return new_sub
 
-# ✅ READ ONE
+# READ ONE
 @submissions_router.get("/{submission_id}", response_model=SubmissionRead)
 async def get_submission(submission_id: int, db: AsyncSession = Depends(get_db)):
     sub = await db.get(Submission, submission_id)
@@ -60,7 +57,7 @@ async def get_submission(submission_id: int, db: AsyncSession = Depends(get_db))
         raise HTTPException(404, "Submission not found")
     return sub
 
-# ✅ READ ALL FOR PROJECT (Для организатора) + Пагинация
+# READ ALL FOR PROJECT
 @submissions_router.get("/project/{project_id}", response_model=list[SubmissionRead])
 async def list_project_submissions(
     project_id: int,
@@ -74,13 +71,13 @@ async def list_project_submissions(
     res = await db.execute(
         select(Submission)
         .where(Submission.project_id == project_id)
-        .order_by(Submission.created_at.desc())  # 🔹 Исправлено: было updated_at
+        .order_by(Submission.created_at.desc())
         .offset(skip)
         .limit(limit)
     )
     return res.scalars().all()
 
-# ✅ UPDATE (Изменение текста или смена статуса)
+# UPDATE
 @submissions_router.patch("/{submission_id}", response_model=SubmissionRead)
 async def update_submission(
     submission_id: int,
@@ -95,7 +92,6 @@ async def update_submission(
     if not update_data:
         return sub
 
-    # Безопасное обновление атрибутов
     for field, value in update_data.items():
         setattr(sub, field, value)
         
@@ -103,14 +99,14 @@ async def update_submission(
     await db.refresh(sub)
     return sub
 
-# ✅ DELETE
+# DELETE
 @submissions_router.delete("/{submission_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_submission(submission_id: int, db: AsyncSession = Depends(get_db)):
     sub = await db.get(Submission, submission_id)
     if not sub:
         raise HTTPException(404, "Submission not found")
 
-    await db.delete(sub)  # SQLAlchemy 2.0 паттерн
+    await db.delete(sub)
     await db.commit()
     return None
 
@@ -121,7 +117,6 @@ async def get_submission_for_review(
     db: AsyncSession = Depends(get_db)
 ):
     """Получить работу + артефакты для проверки. Проверяет наличие назначения."""
-    # 1. Проверяем, назначен ли пользователь на эту работу
     assign = (await db.execute(select(SubmissionAssignment).where(
         SubmissionAssignment.submission_id == submission_id,
         SubmissionAssignment.reviewer_id == reviewer_id
@@ -130,16 +125,13 @@ async def get_submission_for_review(
     if not assign:
         raise HTTPException(403, "You are not assigned to review this submission.")
 
-    # 2. Загружаем работу
     sub = await db.get(Submission, submission_id)
     
-    # 3. Загружаем артефакты
     arts_res = await db.execute(select(SubmissionArtifact).where(
         SubmissionArtifact.submission_id == submission_id
     ))
     artifacts = arts_res.scalars().all()
 
-    # 4. Возвращаем строго по твоей схеме SubmissionReviewView
     return SubmissionReviewView(submission=sub, artifacts=artifacts)
 
 @submissions_router.get("/student/{user_id}/list", response_model=list[StudentSubmissionMini])
@@ -155,14 +147,12 @@ async def get_student_submissions(
     if not user or not user.team_id:
         raise HTTPException(400, "User not found or not assigned to a team")
 
-    # Базовый запрос: работы команды + название проекта
     stmt = (
         select(Submission, Project.name)
         .join(Project, Submission.project_id == Project.id)
         .where(Submission.team_id == user.team_id, Project.mode == mode)
     )
 
-    # Применяем фильтры
     if search:
         stmt = stmt.where(Project.name.ilike(f"%{search}%"))
     if date_from:
@@ -170,7 +160,6 @@ async def get_student_submissions(
     if date_to:
         stmt = stmt.where(Submission.created_at <= date_to)
 
-    # Для режима 2 считаем количество комментариев
     if mode == 2:
         stmt = stmt.add_columns(func.count(SubmissionComment.id).label("comment_count"))
         stmt = stmt.outerjoin(SubmissionComment, Submission.id == SubmissionComment.submission_id)
@@ -180,7 +169,6 @@ async def get_student_submissions(
     res = await db.execute(stmt)
     rows = res.all()
 
-    # Формируем ответ
     if mode == 1:
         return [StudentSubmissionMini(id=r[0].id, project_name=r[1], status=r[0].status, created_at=r[0].created_at) for r in rows]
     else:
@@ -199,10 +187,8 @@ async def get_detail_mode1(submission_id: int, user_id: int, db: AsyncSession = 
     project = await db.get(Project, sub.project_id)
     if project.mode != 1: raise HTTPException(400, "This endpoint is for Mode 1 only")
 
-    # 1. Артефакты
     arts = (await db.execute(select(SubmissionArtifact).where(SubmissionArtifact.submission_id == sub.id))).scalars().all()
 
-    # 2. Оценки по критериям
     scores_res = await db.execute(
         select(SubmissionCriterionScore.score, ProjectCriterion.name, ProjectCriterion.max_score)
         .join(ProjectCriterion, SubmissionCriterionScore.criterion_id == ProjectCriterion.id)
@@ -210,7 +196,6 @@ async def get_detail_mode1(submission_id: int, user_id: int, db: AsyncSession = 
     )
     scores = [CriterionScoreItem(name=r[1], max_score=r[2], score=r[0]) for r in scores_res.all()]
 
-    # 3. Комментарий эксперта (ищем автора через назначение)
     assign = (await db.execute(select(SubmissionAssignment.reviewer_id).where(
         SubmissionAssignment.submission_id == sub.id, SubmissionAssignment.status == "done"
     ))).scalar_one_or_none()
@@ -244,7 +229,6 @@ async def get_detail_mode2(submission_id: int, user_id: int, db: AsyncSession = 
     project = await db.get(Project, sub.project_id)
     if project.mode != 2: raise HTTPException(400, "This endpoint is for Mode 2 only")
 
-    # Комментарии всех студентов-ревьюеров
     comments_res = await db.execute(
         select(SubmissionComment.comment, SubmissionComment.created_at, User.name.label("author_name"))
         .join(User, SubmissionComment.author_id == User.id)

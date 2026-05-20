@@ -18,7 +18,7 @@ from api.schemas import (
 
 projects_router = APIRouter(prefix="/projects", tags=["projects"])
 
-# ✅ CREATE
+# CREATE
 @projects_router.post("/", response_model=ProjectRead, status_code=status.HTTP_201_CREATED)
 async def create_project(data: ProjectCreate, db: AsyncSession = Depends(get_db)):
     if data.mode == 2 and data.participant_team_ids:
@@ -45,7 +45,7 @@ async def create_project(data: ProjectCreate, db: AsyncSession = Depends(get_db)
     await db.refresh(new_project)
     return new_project
 
-# ✅ READ ALL (Пагинация по 16 штук для веб-дашборда)
+# READ ALL (Пагинация по 16 штук для веба)
 @projects_router.get("/", response_model=list[ProjectMiniRead])
 async def list_projects(
     skip: int = Query(0, ge=0),
@@ -60,7 +60,7 @@ async def list_projects(
     )
     return res.scalars().all()
 
-# ✅ READ ONE
+# READ ONE
 @projects_router.get("/{project_id}", response_model=ProjectRead)
 async def get_project(project_id: int, db: AsyncSession = Depends(get_db)):
     project = await db.get(Project, project_id)
@@ -68,7 +68,7 @@ async def get_project(project_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(404, "Project not found")
     return project
 
-# ✅ UPDATE
+# UPDATE
 @projects_router.patch("/{project_id}", response_model=ProjectRead)
 async def update_project(
     project_id: int,
@@ -93,7 +93,7 @@ async def update_project(
     await db.refresh(project)
     return project
 
-# ✅ DELETE
+# DELETE
 @projects_router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_project(project_id: int, db: AsyncSession = Depends(get_db)):
     project = await db.get(Project, project_id)
@@ -108,7 +108,7 @@ async def delete_project(project_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(400, "Cannot delete: active foreign key constraints exist.")
     return None
 
-# 📊 DASHBOARD (Статистика для организатора)
+# DASHBOARD (Статистика для организатора)
 @projects_router.get("/{project_id}/dashboard", response_model=ProjectDashboard)
 async def get_project_dashboard(project_id: int, db: AsyncSession = Depends(get_db)):
     project = await db.get(Project, project_id)
@@ -144,7 +144,7 @@ async def get_project_dashboard(project_id: int, db: AsyncSession = Depends(get_
         experts=experts
     )
 
-# 📤 EXPORT (Таблица для выгрузки)
+# EXPORT (Таблица для выгрузки)
 @projects_router.get("/{project_id}/export", response_model=list[ProjectExportItem])
 async def export_project_data(project_id: int, db: AsyncSession = Depends(get_db)):
     if not await db.get(Project, project_id):

@@ -1,4 +1,3 @@
-# routers/assignments.py
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,7 +9,7 @@ from api.schemas import AssignmentRead, SubmissionRead, NextTaskResponse
 
 assignments_router = APIRouter(prefix="/assignments", tags=["assignments"])
 
-# ==================== ХЕЛПЕР: АВТО-ВЫДАЧА ====================
+# === ХЕЛПЕР: АВТО-ВЫДАЧА ===
 async def _assign_next_work(db: AsyncSession, reviewer_id: int, project: Project) -> int | None:
     """Ищет следующую доступную работу и создаёт назначение (без коммита)."""
     max_reviewers = 1 if project.mode == 1 else 5
@@ -49,7 +48,7 @@ async def _assign_next_work(db: AsyncSession, reviewer_id: int, project: Project
             return next_sub.id
     return None
 
-# ==================== ВЗЯТЬ ЗАДАЧУ (ПЕРВАЯ ИЛИ СЛЕДУЮЩАЯ) ====================
+# === ВЗЯТЬ ЗАДАЧУ (ПЕРВАЯ ИЛИ СЛЕДУЮЩАЯ) ===
 
 @assignments_router.get("/project/{project_id}/next", response_model=NextTaskResponse)
 async def get_next_project_task(
@@ -63,7 +62,6 @@ async def get_next_project_task(
 
     max_reviewers = 1 if project.mode == 1 else 5
 
-    # 1. Проверяем, есть ли уже незавершённая работа у этого ревьюера
     existing = (await db.execute(select(SubmissionAssignment).where(
         SubmissionAssignment.reviewer_id == reviewer_id,
         SubmissionAssignment.status == "pending",
@@ -76,7 +74,6 @@ async def get_next_project_task(
         sub = await db.get(Submission, existing.submission_id)
         return NextTaskResponse(submission=sub, assignment_id=existing.id)
 
-    # 2. Ищем кандидатов (свободные работы в проекте)
     candidates_query = (
         select(Submission)
         .where(
@@ -90,7 +87,6 @@ async def get_next_project_task(
     )
     candidates = (await db.execute(candidates_query)).scalars().all()
 
-    # 3. Последовательно ищем работу со свободным слотом (защита от гонок)
     for sub in candidates:
         count_res = await db.execute(select(func.count(SubmissionAssignment.id)).where(
             SubmissionAssignment.submission_id == sub.id
@@ -114,7 +110,7 @@ async def get_next_project_task(
 
     raise HTTPException(404, "No available submissions. All works are fully assigned or checked.")
 
-# ==================== ФИНАЛИЗАЦИЯ ПРОВЕРКИ ====================
+# === ФИНАЛИЗАЦИЯ ПРОВЕРКИ ===
 
 @assignments_router.post("/{assignment_id}/finalize")
 async def finalize_review(assignment_id: int, db: AsyncSession = Depends(get_db)):
@@ -127,11 +123,9 @@ async def finalize_review(assignment_id: int, db: AsyncSession = Depends(get_db)
     sub = await db.get(Submission, assign.submission_id)
     project = await db.get(Project, sub.project_id)
 
-    # 1. Завершаем назначение
     assign.status = "done"
     assign.completed_at = datetime.utcnow()
 
-    # 2. Для режима 1: считаем итог и блокируем работу
     if project.mode == 1:
         total_mark_res = await db.execute(select(func.sum(SubmissionCriterionScore.score)).where(
             SubmissionCriterionScore.submission_id == sub.id
@@ -142,13 +136,12 @@ async def finalize_review(assignment_id: int, db: AsyncSession = Depends(get_db)
 
     await db.commit()
 
-    # 3. Авто-выдача следующей работы из того же проекта
     next_sub_id = await _assign_next_work(db, assign.reviewer_id, project)
     await db.commit()
 
     return {"message": "Review finalized successfully", "next_submission_id": next_sub_id}
 
-# ==================== МОИ АКТИВНЫЕ ЗАДАЧИ ====================
+# === МОИ АКТИВНЫЕ ЗАДАЧИ ===
 
 @assignments_router.get("/my", response_model=list[AssignmentRead])
 async def get_my_assignments(
@@ -165,7 +158,7 @@ async def get_my_assignments(
     )
     return res.scalars().all()
 
-# ==================== ИСТОРИЯ ПРОВЕРЕННЫХ РАБОТ ====================
+# === ИСТОРИЯ ПРОВЕРЕННЫХ РАБОТ ===
 
 @assignments_router.get("/history", response_model=list[AssignmentRead])
 async def get_review_history(

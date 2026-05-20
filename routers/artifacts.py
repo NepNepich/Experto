@@ -8,7 +8,7 @@ from api.schemas import ArtifactCreate, ArtifactRead
 
 artifacts_router = APIRouter(prefix="/artifacts", tags=["artifacts"])
 
-# ✅ CREATE
+# CREATE
 @artifacts_router.post("/", response_model=ArtifactRead, status_code=201)
 async def create_artifact(data: ArtifactCreate, db: AsyncSession = Depends(get_db)):
     if not await db.get(Submission, data.submission_id):
@@ -20,7 +20,7 @@ async def create_artifact(data: ArtifactCreate, db: AsyncSession = Depends(get_d
     await db.refresh(artifact)
     return artifact
 
-# ✅ READ (список по работе)
+# READ (список по работе)
 @artifacts_router.get("/submission/{submission_id}", response_model=list[ArtifactRead])
 async def get_submission_artifacts(submission_id: int, db: AsyncSession = Depends(get_db)):
     if not await db.get(Submission, submission_id):
@@ -33,7 +33,7 @@ async def get_submission_artifacts(submission_id: int, db: AsyncSession = Depend
     )
     return res.scalars().all()
 
-# ✅ DELETE
+# DELETE
 @artifacts_router.delete("/{artifact_id}", status_code=204)
 async def delete_artifact(artifact_id: int, db: AsyncSession = Depends(get_db)):
     artifact = await db.get(SubmissionArtifact, artifact_id)

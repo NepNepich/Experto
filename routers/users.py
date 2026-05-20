@@ -9,10 +9,9 @@ from api.schemas import UserCreate, UserRead, UserUpdate
 
 users_router = APIRouter(prefix="/users", tags=["users"])
 
-# ✅ CREATE
+# CREATE
 @users_router.post("/", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 async def create_user(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
-    # 1. Явные проверки уникальности до INSERT (надёжнее парсинга ошибок БД)
     email_exists = await db.execute(select(User).where(User.email == user_data.email))
     if email_exists.scalar_one_or_none():
         raise HTTPException(400, "Email already registered")
@@ -29,12 +28,11 @@ async def create_user(user_data: UserCreate, db: AsyncSession = Depends(get_db))
         await db.refresh(new_user)
     except IntegrityError:
         await db.rollback()
-        # Срабатывает только при нарушении FK (неверный team_id) или редких гонках
         raise HTTPException(400, "Invalid team_id: team does not exist or constraint violation")
 
     return new_user
 
-# ✅ READ (один)
+# READ (один)
 @users_router.get("/{user_id}", response_model=UserRead)
 async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
     user = await db.get(User, user_id)
@@ -42,7 +40,7 @@ async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(404, "User not found")
     return user
 
-# ✅ READ (список с пагинацией)
+# READ (список с пагинацией)
 @users_router.get("/", response_model=list[UserRead])
 async def list_users(
     skip: int = Query(0, ge=0, description="Смещение"),
@@ -54,7 +52,7 @@ async def list_users(
     )
     return result.scalars().all()
 
-# ✅ UPDATE (частичное)
+# UPDATE (частичное)
 @users_router.patch("/{user_id}", response_model=UserRead)
 async def update_user(
     user_id: int,
@@ -67,9 +65,8 @@ async def update_user(
 
     update_data = user_update.model_dump(exclude_unset=True)
     if not update_data:
-        return user  # Нечего менять
+        return user
 
-    # Безопасное обновление полей
     for field, value in update_data.items():
         setattr(user, field, value)
 
@@ -77,13 +74,13 @@ async def update_user(
     await db.refresh(user)
     return user
 
-# ✅ DELETE
+# DELETE
 @users_router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
     user = await db.get(User, user_id)
     if not user:
         raise HTTPException(404, "User not found")
 
-    await db.delete(user)  # SQLAlchemy 2.0 паттерн вместо delete().where()
+    await db.delete(user)
     await db.commit()
     return None

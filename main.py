@@ -14,11 +14,11 @@ from routers.auth import auth_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await check_database_connection()  # 👈 Проверка перед стартом
-    print("🚀 Experto Backend запущен")
+    await check_database_connection()
+    print("Experto Backend запущен")
     yield
-    await engine.dispose()  # 👈 Корректное закрытие пула при остановке
-    print("✅ Experto Backend остановлен")
+    await engine.dispose()
+    print("Experto Backend остановлен")
     
 app = FastAPI(
     title="Experto Backend",
@@ -30,24 +30,20 @@ app = FastAPI(
     openapi_url="/openapi.json"
 )
 
-# 🔒 CORS Configuration
-# ⚠️ Важно: allow_origins=["*"] + allow_credentials=True блокируется современными браузерами.
-# Для разработки используйте конкретные домены или allow_origin_regex.
 CORS_ORIGINS = [
-    "http://localhost:3000",   # Next.js / React dev
-    "http://localhost:5173",   # Vite / Vue dev
-    "http://127.0.0.1:8080",   # Local dev
+    "http://localhost:3000",   # React
+    "http://127.0.0.1:8080",   # Local
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ORIGINS,  # Для локальной отладки можно временно вернуть ["*"], убрав credentials
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# 🔌 Роутеры
+# Роутеры
 app.include_router(users_router)
 app.include_router(teams_router)
 app.include_router(projects_router)
@@ -57,7 +53,7 @@ app.include_router(assignments_router)
 app.include_router(artifacts_router)
 app.include_router(auth_router)
 
-# 🩹 Health Check
+# Health Check
 @app.get("/health")
 async def health_check():
     return {

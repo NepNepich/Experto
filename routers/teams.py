@@ -9,7 +9,7 @@ from api.schemas import TeamCreate, TeamRead, TeamUpdate
 
 teams_router = APIRouter(prefix="/teams", tags=["teams"])
 
-# ✅ CREATE
+# CREATE
 @teams_router.post("/", response_model=TeamRead, status_code=status.HTTP_201_CREATED)
 async def create_team(team_data: TeamCreate, db: AsyncSession = Depends(get_db)):
     new_team = Team(**team_data.model_dump())
@@ -18,7 +18,7 @@ async def create_team(team_data: TeamCreate, db: AsyncSession = Depends(get_db))
     await db.refresh(new_team)
     return new_team
 
-# ✅ READ (один)
+# READ (один)
 @teams_router.get("/{team_id}", response_model=TeamRead)
 async def get_team(team_id: int, db: AsyncSession = Depends(get_db)):
     team = await db.get(Team, team_id)
@@ -26,7 +26,7 @@ async def get_team(team_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Team not found")
     return team
 
-# ✅ READ (список с пагинацией)
+# READ (список с пагинацией)
 @teams_router.get("/", response_model=list[TeamRead])
 async def list_teams(
     skip: int = Query(0, ge=0, description="Смещение"),
@@ -38,7 +38,7 @@ async def list_teams(
     )
     return result.scalars().all()
 
-# ✅ UPDATE (частичное)
+# UPDATE (частичное)
 @teams_router.patch("/{team_id}", response_model=TeamRead)
 async def update_team(
     team_id: int,
@@ -51,9 +51,8 @@ async def update_team(
 
     update_data = team_update.model_dump(exclude_unset=True)
     if not update_data:
-        return team  # Нечего менять
+        return team
 
-    # Прямое обновление объекта в памяти (без лишнего SQL-запроса)
     for field, value in update_data.items():
         setattr(team, field, value)
 
@@ -61,7 +60,7 @@ async def update_team(
     await db.refresh(team)
     return team
 
-# ✅ DELETE
+# DELETE
 @teams_router.delete("/{team_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_team(team_id: int, db: AsyncSession = Depends(get_db)):
     team = await db.get(Team, team_id)
@@ -69,7 +68,7 @@ async def delete_team(team_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Team not found")
 
     try:
-        await db.delete(team)  # SQLAlchemy 2.0 паттерн
+        await db.delete(team)
         await db.commit()
     except IntegrityError:
         await db.rollback()

@@ -9,7 +9,7 @@ from api.schemas import WebLoginRequest, BotLoginRequest, LoginResponse
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
 
-# ==================== ВЕБ-ВХОД (только существующие пользователи) ====================
+# === ВЕБ-ВХОД (только существующие пользователи) ===
 
 @auth_router.post("/web", response_model=LoginResponse)
 async def web_login(data: WebLoginRequest, db: AsyncSession = Depends(get_db)):
@@ -19,19 +19,17 @@ async def web_login(data: WebLoginRequest, db: AsyncSession = Depends(get_db)):
     
     return LoginResponse(user_id=user.id, academic_role=user.academic_role, message="Login successful")
 
-# ==================== БОТ-ВХОД (сверка TG ID или авторегистрация) ====================
+# === БОТ-ВХОД (сверка TG ID или авторегистрация) ===
 
 @auth_router.post("/bot", response_model=LoginResponse)
 async def bot_login(data: BotLoginRequest, db: AsyncSession = Depends(get_db)):
     user = (await db.execute(select(User).where(User.email == data.email))).scalar_one_or_none()
 
     if user:
-        # Пользователь есть → сверяем Telegram ID
         if user.telegram_id != data.telegram_id:
             raise HTTPException(403, "Telegram ID does not match the registered account.")
         return LoginResponse(user_id=user.id, academic_role=user.academic_role, message="Login successful")
     
-    # Пользователя нет → создаём нового с привязкой к боту
     try:
         new_user = User(
             name=data.email.split("@")[0] or "bot_user",

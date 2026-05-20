@@ -73,7 +73,7 @@ class UserRead(UserCreate):
 class ProjectCreate(BaseModel):
     name: str = Field(..., max_length=255)
     mode: int = Field(..., ge=1, le=2)
-    deadline: datetime  # 👈 Обязательно при создании
+    deadline: datetime
     participant_team_ids: list[int] | None = Field(None, description="Required for mode 2")
 
     @model_validator(mode="after")
