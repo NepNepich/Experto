@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict, model_validator
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 # === ENUMS ===
@@ -82,7 +82,7 @@ class ProjectCreate(BaseModel):
             raise ValueError("Mode 2 requires participant_team_ids")
         if self.mode == 1:
             self.participant_team_ids = []
-        if self.deadline <= datetime.now():
+        if self.deadline <= datetime.now(timezone.utc):
             raise ValueError("Deadline must be in the future")
         return self
 
@@ -112,6 +112,11 @@ class CriterionCreate(BaseModel):
 class CriterionRead(CriterionCreate):
     id: int
     model_config = ConfigDict(from_attributes=True)
+
+class CriterionUpdate(BaseModel):
+    name: str | None = Field(None, max_length=127)
+    max_score: int | None = Field(None, ge=1, le=100)
+    sort_order: int | None = None
     
 # === SUBMISSIONS ===
 
@@ -275,4 +280,9 @@ class SubmissionDetailMode2(BaseModel):
     project_name: str
     content: str
     comments: list[PeerCommentView]
+    model_config = ConfigDict(from_attributes=True)
+    
+class NextTaskResponse(BaseModel):
+    submission: SubmissionRead
+    assignment_id: int
     model_config = ConfigDict(from_attributes=True)

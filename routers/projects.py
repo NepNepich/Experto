@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime
+from datetime import datetime, timezone
 
 from database import get_db
 from api.models import (
@@ -83,7 +83,7 @@ async def update_project(
     if not update_data:
         return project
 
-    if "deadline" in update_data and update_data["deadline"] <= datetime.utcnow():
+    if "deadline" in update_data and update_data["deadline"] <= datetime.now(timezone.utc):
         raise HTTPException(400, "Deadline must be in the future")
 
     for field, value in update_data.items():

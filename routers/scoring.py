@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime
+from datetime import datetime, timezone
 
 from database import get_db
 from api.models import (
@@ -10,14 +10,21 @@ from api.models import (
 )
 from api.schemas import (
     ScoreCreate, ScoreRead,
-    CommentCreate, CommentRead, CommentUpdate
+    CommentCreate, CommentRead, CommentUpdate,
+    CriterionCreate, CriterionRead, CriterionUpdate
 )
 
 scoring_router = APIRouter(prefix="/scoring", tags=["scoring"])
 
 # 🔒 Вспомогательная проверка дедлайна
+
+def is_deadline_passed(deadline: datetime) -> bool:
+    """Приводит deadline к naive-формату и сравнивает с текущим UTC"""
+    dl = deadline.replace(tzinfo=None) if deadline.tzinfo else deadline
+    return dl <= datetime.utcnow()
+
 def _check_deadline(project: Project):
-    if project.deadline <= datetime.utcnow():
+    if is_deadline_passed(project.deadline):
         raise HTTPException(status_code=403, detail="Project deadline has passed. Edits are locked.")
 
 # ==================== ОЦЕНКИ: СОЗДАНИЕ (Черновик) ====================
@@ -194,6 +201,84 @@ async def delete_criterion(criterion_id: int, db: AsyncSession = Depends(get_db)
     ))
     if scores.scalars().first():
         raise HTTPException(400, "Cannot delete: scores have already been submitted for this criterion")
+        
+    await db.delete(criterion)
+    await db.commit()
+    return None
+
+# ==================== УПРАВЛЕНИЕ КРИТЕРИЯМИ (ОРГАНИЗАТОР) ====================
+
+@scoring_router.post("/criteria", response_model=CriterionRead, status_code=status.HTTP_201_CREATED)
+async def create_criterion(data: CriterionCreate, db: AsyncSession = Depends(get_db)):
+    project = await db.get(Project, data.project_id)
+    if not project:
+        raise HTTPException(404, "Project not found")
+    
+    # Защита: нельзя добавлять критерии, если дедлайн уже прошёл
+    if project.deadline <= datetime.utcnow():
+        raise HTTPException(403, "Project deadline passed. Criteria are locked.")
+
+    new_criterion = ProjectCriterion(**data.model_dump())
+    db.add(new_criterion)
+    await db.commit()
+    await db.refresh(new_criterion)
+    return new_criterion
+
+@scoring_router.get("/criteria/project/{project_id}", response_model=list[CriterionRead])
+async def get_project_criteria(project_id: int, db: AsyncSession = Depends(get_db)):
+    if not await db.get(Project, project_id):
+        raise HTTPException(404, "Project not found")
+    
+    res = await db.execute(
+        select(ProjectCriterion)
+        .where(ProjectCriterion.project_id == project_id)
+        .order_by(ProjectCriterion.sort_order.asc(), ProjectCriterion.id.asc())
+    )
+    return res.scalars().all()
+
+@scoring_router.patch("/criteria/{criterion_id}", response_model=CriterionRead)
+async def update_criterion(criterion_id: int, data: CriterionUpdate, db: AsyncSession = Depends(get_db)):
+    criterion = await db.get(ProjectCriterion, criterion_id)
+    if not criterion:
+        raise HTTPException(404, "Criterion not found")
+
+    # Проверяем дедлайн проекта
+    project = await db.get(Project, criterion.project_id)
+    if project.deadline <= datetime.utcnow():
+        raise HTTPException(403, "Project deadline passed. Criteria are locked.")
+
+    update_data = data.model_dump(exclude_unset=True)
+    if not update_data:
+        return criterion
+
+    # Защита: нельзя менять max_score, если уже выставлены оценки по этому критерию
+    if "max_score" in update_data:
+        scores = await db.execute(select(func.count(SubmissionCriterionScore.id)).where(
+            SubmissionCriterionScore.criterion_id == criterion_id
+        ))
+        if scores.scalar() > 0:
+            raise HTTPException(400, "Cannot change max_score: scores have already been submitted")
+
+    for field, value in update_data.items():
+        setattr(criterion, field, value)
+
+    await db.commit()
+    await db.refresh(criterion)
+    return criterion
+
+# ✅ DELETE (уже был, убедись, что он выглядит так)
+@scoring_router.delete("/criteria/{criterion_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_criterion(criterion_id: int, db: AsyncSession = Depends(get_db)):
+    criterion = await db.get(ProjectCriterion, criterion_id)
+    if not criterion:
+        raise HTTPException(404, "Criterion not found")
+        
+    # Нельзя удалить, если есть оценки
+    scores = await db.execute(select(func.count(SubmissionCriterionScore.id)).where(
+        SubmissionCriterionScore.criterion_id == criterion_id
+    ))
+    if scores.scalar() > 0:
+        raise HTTPException(400, "Cannot delete: scores exist for this criterion")
         
     await db.delete(criterion)
     await db.commit()

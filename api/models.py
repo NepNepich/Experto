@@ -1,11 +1,11 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Enum
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Enum, UniqueConstraint
 from sqlalchemy.orm import relationship, declarative_base
 from sqlalchemy.dialects.mysql import TINYINT, BIGINT
-from datetime import datetime
+from datetime import datetime, timezone
 
 Base = declarative_base()
 
-# === TEAM ===
+# ==================== USERS & TEAMS ====================
 
 class Team(Base):
     __tablename__ = "teams"
@@ -13,11 +13,9 @@ class Team(Base):
     name = Column(String(127), nullable=False)
 
     users = relationship("User", back_populates="team")
-    created_projects = relationship("Project", foreign_keys="Project.team_id", back_populates="creator_team")
     submissions = relationship("Submission", back_populates="team")
     participant_in_projects = relationship("ProjectTeam", back_populates="team")
 
-# === USER ===
 
 class User(Base):
     __tablename__ = "users"
@@ -26,24 +24,27 @@ class User(Base):
     email = Column(String(255), nullable=False, unique=True)
     code = Column(String(255), nullable=False, unique=True)
     telegram_id = Column(BIGINT, unique=True)
+    
     academic_role = Column(Enum('org', 'expert', 'student', name='academic_role_enum'), nullable=False, default='student')
     team_role = Column(Enum('team_lead', 'developer', 'analytic', 'game_designer', 'designer', name='team_role_enum'), nullable=True)
     team_id = Column(Integer, ForeignKey("teams.id", ondelete="SET NULL"), nullable=True)
 
     team = relationship("Team", back_populates="users")
+    
     authored_comments = relationship("SubmissionComment", back_populates="author")
-    scores_given = relationship("SubmissionScore", back_populates="expert")
+    scores_given = relationship("SubmissionCriterionScore", back_populates="expert")  # 👈 Исправлено имя класса
     assignments_received = relationship("SubmissionAssignment", back_populates="reviewer")
 
-# === PROJECT ===
+
+# ==================== PROJECTS & CRITERIA ====================
 
 class Project(Base):
     __tablename__ = "projects"
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(255), nullable=False)
     mode = Column(TINYINT(unsigned=True), nullable=False)
-    date_created = Column(DateTime, default=datetime.now)
     deadline = Column(DateTime, nullable=False)
+    date_created = Column(DateTime, default=datetime.now(timezone.utc))
     status = Column(Enum('submitted', 'assigned', 'checked', name='project_status_enum'), default='submitted')
 
     participant_links = relationship("ProjectTeam", back_populates="project", cascade="all, delete-orphan")
@@ -69,26 +70,29 @@ class ProjectCriterion(Base):
     sort_order = Column(TINYINT(unsigned=True), default=0)
 
     project = relationship("Project", back_populates="criteria")
-    scores = relationship("SubmissionScore", back_populates="criterion")
+    scores = relationship("SubmissionCriterionScore", back_populates="criterion")  # 👈 Исправлено имя класса
 
-# === SUBMISSION ===
+
+# ==================== SUBMISSIONS (РАБОТЫ) ====================
 
 class Submission(Base):
     __tablename__ = "submissions"
     id = Column(Integer, primary_key=True, autoincrement=True)
     project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
-    team_id = Column(Integer, ForeignKey("teams.id", ondelete="CASCADE"), nullable=False)  # Автор работы
+    team_id = Column(Integer, ForeignKey("teams.id", ondelete="CASCADE"), nullable=False)
     content = Column(Text, nullable=False)
+    
     mark = Column(TINYINT(unsigned=True), nullable=True)
+    checked_at = Column(DateTime, nullable=True)  # 👈 Дата финальной проверки
     status = Column(Enum('unchecked', 'checking', 'checked', name='submission_status_enum'), default='unchecked')
-    created_at = Column(DateTime, default=datetime.now())
-    checked_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.now(timezone.utc))
 
     project = relationship("Project", back_populates="submissions")
     team = relationship("Team", back_populates="submissions")
+    
     artifacts = relationship("SubmissionArtifact", back_populates="submission", cascade="all, delete-orphan")
     comments = relationship("SubmissionComment", back_populates="submission", cascade="all, delete-orphan")
-    scores = relationship("SubmissionScore", back_populates="submission", cascade="all, delete-orphan")
+    scores = relationship("SubmissionCriterionScore", back_populates="submission", cascade="all, delete-orphan")  # 👈 Исправлено
     assignments = relationship("SubmissionAssignment", back_populates="submission", cascade="all, delete-orphan")
 
 
@@ -108,13 +112,16 @@ class SubmissionComment(Base):
     submission_id = Column(Integer, ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False)
     author_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     comment = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now(timezone.utc))
 
     submission = relationship("Submission", back_populates="comments")
     author = relationship("User", back_populates="authored_comments")
 
-class SubmissionCriterionScore(Base):
-    __tablename__ = "submission_scores"
+
+# ==================== SCORING & ASSIGNMENTS ====================
+
+class SubmissionCriterionScore(Base):  # 👈 Правильное имя класса
+    __tablename__ = "submission_criterion_scores"
     submission_id = Column(Integer, ForeignKey("submissions.id", ondelete="CASCADE"), primary_key=True)
     criterion_id = Column(Integer, ForeignKey("project_criteria.id", ondelete="CASCADE"), primary_key=True)
     expert_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
@@ -127,11 +134,14 @@ class SubmissionCriterionScore(Base):
 
 class SubmissionAssignment(Base):
     __tablename__ = "submission_assignments"
+    __table_args__ = (
+        UniqueConstraint('submission_id', 'reviewer_id'),  # 👈 Один ревьюер = одна запись на работу
+    )
     id = Column(Integer, primary_key=True, autoincrement=True)
     submission_id = Column(Integer, ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False)
     reviewer_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     status = Column(Enum('pending', 'done', name='assignment_status_enum'), default='pending')
-    assigned_at = Column(DateTime, default=datetime.utcnow)
+    assigned_at = Column(DateTime, default=datetime.now(timezone.utc))
     completed_at = Column(DateTime, nullable=True)
 
     submission = relationship("Submission", back_populates="assignments")
