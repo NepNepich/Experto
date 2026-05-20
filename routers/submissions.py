@@ -13,7 +13,8 @@ from api.models import (
 from api.schemas import (
     SubmissionCreate, SubmissionRead, SubmissionUpdate, 
     SubmissionReviewView, StudentSubmissionMini, CriterionScoreItem, 
-    SubmissionDetailMode1, PeerCommentView, SubmissionDetailMode2
+    SubmissionDetailMode1, PeerCommentView, SubmissionDetailMode2,
+    ArtifactRead
     )
 
 submissions_router = APIRouter(prefix="/submissions", tags=["submissions"])
@@ -137,8 +138,8 @@ async def get_submission_for_review(
 @submissions_router.get("/student/{user_id}/list", response_model=list[StudentSubmissionMini])
 async def get_student_submissions(
     user_id: int,
-    mode: int = Query(..., ge=1, le=2, description="1 = Экспертный, 2 = P2P"),
-    search: str | None = Query(None, description="Поиск по названию проекта"),
+    mode: int = Query(..., ge=1, le=2),
+    search: str | None = Query(None),
     date_from: datetime | None = Query(None),
     date_to: datetime | None = Query(None),
     db: AsyncSession = Depends(get_db)
@@ -177,44 +178,85 @@ async def get_student_submissions(
 
 @submissions_router.get("/{submission_id}/detail/mode1", response_model=SubmissionDetailMode1)
 async def get_detail_mode1(submission_id: int, user_id: int, db: AsyncSession = Depends(get_db)):
-    sub = await db.get(Submission, submission_id)
-    if not sub: raise HTTPException(404, "Submission not found")
-
-    user = await db.get(User, user_id)
-    if not user or user.team_id != sub.team_id:
-        raise HTTPException(403, "Access denied: submission belongs to another team")
-
-    project = await db.get(Project, sub.project_id)
-    if project.mode != 1: raise HTTPException(400, "This endpoint is for Mode 1 only")
-
-    arts = (await db.execute(select(SubmissionArtifact).where(SubmissionArtifact.submission_id == sub.id))).scalars().all()
-
-    scores_res = await db.execute(
-        select(SubmissionCriterionScore.score, ProjectCriterion.name, ProjectCriterion.max_score)
-        .join(ProjectCriterion, SubmissionCriterionScore.criterion_id == ProjectCriterion.id)
-        .where(SubmissionCriterionScore.submission_id == sub.id)
-    )
-    scores = [CriterionScoreItem(name=r[1], max_score=r[2], score=r[0]) for r in scores_res.all()]
-
-    assign = (await db.execute(select(SubmissionAssignment.reviewer_id).where(
-        SubmissionAssignment.submission_id == sub.id, SubmissionAssignment.status == "done"
-    ))).scalar_one_or_none()
+    import logging
+    logger = logging.getLogger("submissions")
     
-    expert_comment = None
-    if assign:
-        comments = (await db.execute(select(SubmissionComment.comment).where(
-            SubmissionComment.submission_id == sub.id, SubmissionComment.author_id == assign
-        ))).scalars().all()
-        expert_comment = "\n".join(comments) if comments else None
+    try:
+        # 1. Загружаем сущности
+        sub = await db.get(Submission, submission_id)
+        if not sub:
+            raise HTTPException(404, "Submission not found")
 
-    return SubmissionDetailMode1(
-        project_name=project.name,
-        content=sub.content,
-        artifacts=arts,
-        scores=scores,
-        total_mark=sub.mark,
-        expert_comment=expert_comment
-    )
+        user = await db.get(User, user_id)
+        if not user or not user.team_id or user.team_id != sub.team_id:
+            raise HTTPException(403, "Access denied: submission belongs to another team")
+
+        project = await db.get(Project, sub.project_id)
+        if project.mode != 1:
+            raise HTTPException(400, "This endpoint is for Mode 1 only")
+
+        # 2. Артефакты (безопасно)
+        arts_res = await db.execute(select(SubmissionArtifact).where(SubmissionArtifact.submission_id == sub.id))
+        artifacts = [ArtifactRead.model_validate(a) for a in arts_res.scalars().all()]
+
+        # 3. Оценки по критериям (упрощённый запрос)
+        scores = []
+        scores_res = await db.execute(
+            select(SubmissionCriterionScore, ProjectCriterion)
+            .join(ProjectCriterion, SubmissionCriterionScore.criterion_id == ProjectCriterion.id)
+            .where(SubmissionCriterionScore.submission_id == sub.id)
+        )
+        for score_obj, criterion in scores_res.all():
+            if criterion and score_obj.score is not None:
+                scores.append(CriterionScoreItem(
+                    criterion_name=criterion.name or "Unknown",
+                    max_score=criterion.max_score or 0,
+                    score=score_obj.score
+                ))
+
+        # 4. Комментарий эксперта (упрощённая логика)
+        expert_comment = None
+        assign_res = await db.execute(
+            select(SubmissionAssignment.reviewer_id)
+            .where(
+                SubmissionAssignment.submission_id == sub.id,
+                SubmissionAssignment.status == "done"
+            )
+            .limit(1)
+        )
+        expert_id = assign_res.scalar_one_or_none()
+        
+        if expert_id:
+            comments_res = await db.execute(
+                select(SubmissionComment.comment)
+                .where(
+                    SubmissionComment.submission_id == sub.id,
+                    SubmissionComment.author_id == expert_id,
+                    SubmissionComment.comment != None  # noqa: E711
+                )
+            )
+            comments = [c[0] for c in comments_res.all() if c[0]]
+            if comments:
+                expert_comment = "\n".join(comments)
+
+        # 5. Формируем ответ
+        response_data = {
+            "project_name": project.name or "",
+            "content": sub.content or "",
+            "artifacts": artifacts,
+            "scores": scores,
+            "total_mark": int(sub.mark) if sub.mark is not None else None,
+            "expert_comment": expert_comment
+        }
+        
+        # Явная валидация перед возвратом
+        return SubmissionDetailMode1(**response_data)
+        
+    except HTTPException:
+        raise  # Пробрасываем наши ошибки как есть
+    except Exception as e:
+        logger.error(f"❌ Critical error in get_detail_mode1: {type(e).__name__}: {e}", exc_info=True)
+        raise HTTPException(500, f"Internal error: {str(e)}")
 
 
 @submissions_router.get("/{submission_id}/detail/mode2", response_model=SubmissionDetailMode2)

@@ -109,6 +109,11 @@ class CriterionCreate(BaseModel):
     max_score: int = Field(..., ge=1, le=100)
     sort_order: int = 0
 
+class CriterionCreateNested(BaseModel):
+    name: str = Field(..., max_length=127)
+    max_score: int = Field(..., ge=1, le=100)
+    sort_order: int = 0
+
 class CriterionRead(CriterionCreate):
     id: int
     model_config = ConfigDict(from_attributes=True)
@@ -260,6 +265,7 @@ class CriterionScoreItem(BaseModel):
     criterion_name: str
     max_score: int
     score: int
+    model_config = ConfigDict(from_attributes=True)
 
 class SubmissionDetailMode1(BaseModel):
     project_name: str
@@ -286,3 +292,10 @@ class NextTaskResponse(BaseModel):
     submission: SubmissionRead
     assignment_id: int
     model_config = ConfigDict(from_attributes=True)
+    
+class ProjectWithCriteriaCreate(BaseModel):
+    name: str = Field(..., max_length=255)
+    mode: int = Field(..., ge=1, le=2)
+    deadline: datetime
+    participant_team_ids: list[int] | None = None
+    criteria: list[CriterionCreateNested] | None = None

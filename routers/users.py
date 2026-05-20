@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from api.models import User
-from api.schemas import UserCreate, UserRead, UserUpdate
+from api.schemas import UserCreate, UserRead, UserUpdate, AcademicRole, TeamRole
 
 users_router = APIRouter(prefix="/users", tags=["users"])
 
@@ -84,3 +84,37 @@ async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
     await db.delete(user)
     await db.commit()
     return None
+
+@users_router.patch("/bulk/academic-role")
+async def bulk_update_academic_role(
+    organizer_id: int = Query(...),
+    emails: list[str] = Body(..., embed=True),  # ["a@b.com", "c@d.com"]
+    new_role: AcademicRole = Body(..., embed=True),  # "expert"
+    db: AsyncSession = Depends(get_db)
+):
+    updated = []
+    for email in emails:
+        user = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
+        if user:
+            user.academic_role = new_role
+            updated.append(user.id)
+            await db.flush()
+    await db.commit()
+    return {"updated_count": len(updated), "updated_user_ids": updated}
+
+@users_router.patch("/bulk/team-role")
+async def bulk_update_team_role(
+    organizer_id: int = Query(...),
+    emails: list[str] = Body(..., embed=True),
+    new_role: TeamRole = Body(..., embed=True),
+    db: AsyncSession = Depends(get_db)
+):
+    updated = []
+    for email in emails:
+        user = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
+        if user and user.team_id:
+            user.team_role = new_role
+            updated.append(user.id)
+            await db.flush()
+    await db.commit()
+    return {"updated_count": len(updated), "updated_user_ids": updated}

@@ -9,11 +9,12 @@ from api.models import (
     Project, Team, ProjectTeam, 
     Submission, SubmissionAssignment, 
     SubmissionCriterionScore, SubmissionComment, 
-    User
+    User, ProjectCriterion
 )
 from api.schemas import (
     ProjectCreate, ProjectRead, ProjectUpdate, 
-    ProjectMiniRead, ProjectDashboard, ExpertProgress, ProjectExportItem
+    ProjectMiniRead, ProjectDashboard, ExpertProgress, ProjectExportItem,
+    ProjectWithCriteriaCreate, CriterionCreateNested
 )
 
 projects_router = APIRouter(prefix="/projects", tags=["projects"])
@@ -59,6 +60,54 @@ async def list_projects(
         .limit(limit)
     )
     return res.scalars().all()
+
+@projects_router.get("/active", response_model=list[ProjectRead])
+async def get_active_projects(db: AsyncSession = Depends(get_db)):
+    now = datetime.now(timezone.utc)
+
+    stmt = select(Project).where(Project.deadline > now).order_by(Project.deadline.asc())
+    
+    res = await db.execute(stmt)
+    projects = res.scalars().all()
+
+    return [ProjectRead.model_validate(p) for p in projects]
+
+@projects_router.post("/with-criteria", response_model=ProjectRead, status_code=201)
+async def create_project_with_criteria(data: ProjectWithCriteriaCreate, db: AsyncSession = Depends(get_db)):
+    if data.mode == 2 and data.participant_team_ids:
+        teams_res = await db.execute(select(Team).where(Team.id.in_(data.participant_team_ids)))
+        existing = {t.id for t in teams_res.scalars().all()}
+        missing = set(data.participant_team_ids) - existing
+        if missing:
+            raise HTTPException(400, f"Teams not found: {missing}")
+
+    new_project = Project(
+        name=data.name,
+        mode=data.mode,
+        deadline=data.deadline,
+        status="submitted"
+    )
+    db.add(new_project)
+    await db.flush()
+
+    if data.mode == 2 and data.participant_team_ids:
+        for tid in data.participant_team_ids:
+            db.add(ProjectTeam(project_id=new_project.id, team_id=tid))
+
+    if data.criteria:
+        for crit_data in data.criteria:
+            criterion = ProjectCriterion(
+                project_id=new_project.id,
+                name=crit_data.name,
+                max_score=crit_data.max_score,
+                sort_order=crit_data.sort_order
+            )
+            db.add(criterion)
+
+    await db.commit()
+    await db.refresh(new_project)
+    return new_project
+
 
 # READ ONE
 @projects_router.get("/{project_id}", response_model=ProjectRead)
