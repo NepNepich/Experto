@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>УрФУ | Студент + Организатор (полная версия)</title>
+    <title>Experto - Платформа экспертной оценки</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -19,15 +19,22 @@
             padding: 1.5rem;
             margin-bottom: 2rem;
             border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         .flex-row { display: flex; gap: 1rem; align-items: center; justify-content: space-between; flex-wrap: wrap; }
-        input, button {
+        input, button, select, textarea {
             padding: 0.6rem 1.2rem;
             border-radius: 40px;
             border: 1px solid #cbd5e1;
             font-size: 0.9rem;
+            font-family: inherit;
         }
-        button.primary { background: #1e40af; color: white; border: none; cursor: pointer; }
+        button.primary { background: #1e40af; color: white; border: none; cursor: pointer; transition: background 0.2s; }
+        button.primary:hover { background: #1e3a8a; }
+        button.danger { background: #dc2626; color: white; border: none; cursor: pointer; }
+        button.danger:hover { background: #b91c1c; }
+        button.secondary { background: #64748b; color: white; border: none; cursor: pointer; }
+        button.secondary:hover { background: #475569; }
         .role-badge {
             background: #eef2ff;
             padding: 0.3rem 0.9rem;
@@ -48,32 +55,32 @@
             border: none;
             cursor: pointer;
             border-radius: 30px 30px 0 0;
+            transition: all 0.2s;
         }
         .tab-btn.active {
             background: white;
             border: 1px solid #cbd5e1;
             border-bottom-color: white;
+            font-weight: 600;
         }
         .tab-content { display: none; background: white; border-radius: 24px; padding: 1.5rem; border: 1px solid #e2e8f0; }
         .tab-content.active { display: block; }
         
-        /* Поиск */
         .search-bar {
             display: flex;
             gap: 1rem;
             margin-bottom: 1.5rem;
             flex-wrap: wrap;
+            align-items: center;
         }
         .search-bar input, .search-bar select {
             padding: 0.5rem 1rem;
             border-radius: 40px;
             border: 1px solid #cbd5e1;
         }
-        
-        /* Работы (студент) */
         .works-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
             gap: 1rem;
         }
         .work-card {
@@ -82,11 +89,13 @@
             border-radius: 16px;
             border: 1px solid #e2e8f0;
             cursor: pointer;
-            transition: 0.1s ease;
+            transition: all 0.2s ease;
         }
         .work-card:hover {
             border-color: #3b82f6;
             background: #fafcff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
         }
         .status-badge {
             display: inline-block;
@@ -96,40 +105,9 @@
             font-weight: 600;
         }
         .status-checked { background: #dcfce7; color: #166534; }
+        .status-checking { background: #fef3c7; color: #92400e; }
         .status-pending { background: #fff3cd; color: #856404; }
         
-        /* Организатор: плитки работ */
-        .org-works-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-        .org-work-card {
-            background: #f8fafc;
-            padding: 1rem;
-            border-radius: 16px;
-            border: 1px solid #e2e8f0;
-            cursor: pointer;
-            transition: 0.1s ease;
-        }
-        .org-work-card:hover {
-            border-color: #3b82f6;
-            background: #fafcff;
-        }
-        .work-title {
-            font-weight: 700;
-            font-size: 1.1rem;
-        }
-        .date-info {
-            font-size: 0.8rem;
-            color: #475569;
-            margin-top: 0.5rem;
-        }
-        .status-completed { background: #dcfce7; color: #166534; }
-        .status-progress { background: #fff3cd; color: #856404; }
-        
-        /* Модальное окно */
         .modal {
             display: none;
             position: fixed;
@@ -160,15 +138,29 @@
         .close-modal:hover { color: #1e293b; }
         
         .score {
-            font-size: 1.3rem;
+            font-size: 1.5rem;
             font-weight: bold;
             color: #1e40af;
         }
-        .peer-review {
-            background: #f1f5f9;
-            padding: 0.8rem;
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #6b7280;
+        }
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 1rem;
             border-radius: 16px;
-            margin-bottom: 0.8rem;
+            margin: 1rem 0;
+        }
+        .team-name {
+            background: #eef2ff;
+            display: inline-block;
+            padding: 0.5rem 1.2rem;
+            border-radius: 50px;
+            margin-bottom: 1rem;
+            font-weight: 600;
         }
         .stats-summary {
             background: #eef2ff;
@@ -177,38 +169,56 @@
             margin-bottom: 1rem;
         }
         .export-btn {
-            background: #1e40af;
+            background: #10b981;
             color: white;
             border: none;
             padding: 0.6rem 1.2rem;
             border-radius: 40px;
             cursor: pointer;
             margin-top: 1rem;
-        }
-        table {
             width: 100%;
-            border-collapse: collapse;
-            margin: 1rem 0;
+            font-size: 1rem;
         }
-        th, td {
-            padding: 0.8rem;
-            text-align: left;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        th {
-            background: #f1f5f9;
-        }
+        .export-btn:hover { background: #059669; }
         .note {
             font-size: 0.8rem;
             color: #475569;
             margin-top: 0.8rem;
         }
-        .team-name {
-            background: #eef2ff;
+        .artifact-link {
             display: inline-block;
-            padding: 0.3rem 1rem;
-            border-radius: 50px;
-            margin-bottom: 1rem;
+            background: #eef2ff;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            margin: 0.2rem;
+            text-decoration: none;
+            color: #1e40af;
+            font-size: 0.85rem;
+        }
+        .expert-stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .progress-bar {
+            background: #e2e8f0;
+            border-radius: 20px;
+            height: 20px;
+            overflow: hidden;
+            margin: 0.5rem 0;
+        }
+        .progress-fill {
+            background: #1e40af;
+            height: 100%;
+            border-radius: 20px;
+            transition: width 0.3s;
+        }
+        .info-text {
+            font-size: 0.8rem;
+            color: #475569;
+            margin-bottom: 0.5rem;
+            font-style: italic;
         }
     </style>
 </head>
@@ -219,44 +229,60 @@
             <div>
                 <strong>🔐 Вход по email</strong>
                 <div style="margin-top: 10px;">
-                    <input type="email" id="emailInput" placeholder="student@example.com" value="student@example.com">
+                    <input type="email" id="emailInput" placeholder="student@example.com" value="org1@test.com">
                     <button id="loginBtn" class="primary">Войти</button>
+                    <button id="checkServerBtn" class="secondary">🔍 Проверить сервер</button>
                 </div>
-                <div class="note">📧 student@example.com | beta@example.com | gamma@example.com (студенты)<br>org@example.com (организатор)</div>
+                <div class="note">
+                    📧 <strong>Тестовые аккаунты:</strong><br>
+                    🧑‍🎓 Студенты: alice@test.com, bob@test.com, charlie@test.com, dave@test.com<br>
+                    🏢 Организаторы: org1@test.com, org2@test.com
+                </div>
             </div>
             <div id="userInfo"></div>
         </div>
+        <div id="serverStatus" style="margin-top: 10px; font-size: 0.85rem;"></div>
     </div>
 
     <div id="appContent" style="display: none;">
         <!-- СТУДЕНТ -->
         <div id="studentView" style="display: none;">
             <div id="studentTeamName" class="team-name"></div>
-            
             <div class="tabs" id="studentMainTabs">
                 <button class="tab-btn active" data-tab="expertTab">⭐ Режим 1: Экспертная оценка</button>
                 <button class="tab-btn" data-tab="peerTab">👥 Режим 2: Взаимопроверка</button>
             </div>
-            
             <div id="expertTab" class="tab-content active">
                 <div class="search-bar">
-                    <input type="text" id="searchTitle" placeholder="Поиск по названию...">
-                    <input type="date" id="searchDate" placeholder="Поиск по дате">
-                    <button id="clearSearch">Сбросить</button>
+                    <input type="text" id="searchTitle" placeholder="Поиск по названию..." style="flex: 1;">
+                    <input type="date" id="searchDate" placeholder="Дата">
+                    <button id="clearSearch" class="secondary">Сбросить</button>
+                    <button id="refreshExpert" class="secondary">🔄 Обновить</button>
                 </div>
-                <div id="expertWorksList" class="works-grid"></div>
+                <div id="expertWorksList" class="works-grid"><div class="loading">Загрузка работ...</div></div>
             </div>
-            
             <div id="peerTab" class="tab-content">
-                <div id="peerWorksList" class="works-grid"></div>
+                <div class="search-bar">
+                    <input type="text" id="peerSearchTitle" placeholder="Поиск по названию..." style="flex: 1;">
+                    <input type="date" id="peerSearchDate" placeholder="Фильтр по дате">
+                    <button id="clearPeerSearch" class="secondary">Сбросить</button>
+                    <button id="refreshPeer" class="secondary">🔄 Обновить</button>
+                </div>
+                <div id="peerWorksList" class="works-grid"><div class="loading">Загрузка работ...</div></div>
                 <div class="note">👥 Здесь отображаются комментарии от других студентов к работам вашей команды.</div>
             </div>
         </div>
         
-        <!-- ОРГАНИЗАТОР (новая версия с работами, датами, выгрузкой) -->
+        <!-- ОРГАНИЗАТОР -->
         <div id="organizerView" style="display: none;">
-            <h2>📊 Контроль проверки работ</h2>
-            <div id="organizerWorksGrid" class="org-works-grid"></div>
+            <h2>📊 Дашборд проектов</h2>
+            <div class="search-bar">
+                <input type="text" id="orgSearchTitle" placeholder="Поиск по названию проекта..." style="flex: 1;">
+                <input type="date" id="orgSearchDate" placeholder="Фильтр по дедлайну">
+                <button id="clearOrgSearch" class="secondary">Сбросить</button>
+                <button id="refreshProjects" class="secondary">🔄 Обновить список</button>
+            </div>
+            <div id="projectsList" class="works-grid"><div class="loading">Загрузка проектов...</div></div>
         </div>
     </div>
 </div>
@@ -267,340 +293,448 @@
         <span class="close-modal">&times;</span>
         <h3 id="modalTitle"></h3>
         <div id="modalBody"></div>
-        <button id="exportBtn" class="export-btn" style="display: none;">📥 Выгрузить таблицу работ (CSV)</button>
+        <button id="exportModalBtn" class="export-btn" style="display: none;">📥 Выгрузить таблицу результатов (CSV)</button>
     </div>
 </div>
 
 <script>
-    // ========== БАЗА ДАННЫХ ==========
-    const TEAMS = [
-        { id: 1, name: "Команда «Альфа»", emailAlias: "student" },
-        { id: 2, name: "Команда «Бета»", emailAlias: "beta" },
-        { id: 3, name: "Команда «Гамма»", emailAlias: "gamma" }
-    ];
-    
-    // ЭКСПЕРТНАЯ оценка (для студента)
-    const WORKS_EXPERT = {
-        1: [
-            { id: 1, workNumber: 1, title: "Работа 1", role: "Аналитик", link: "https://drive.google.com/alpha/work1", score: 85, comment: "✅ Отлично! Анализ полный, но можно глубже.", isChecked: true, submittedAt: "2025-04-20" },
-            { id: 2, workNumber: 2, title: "Работа 2", role: "Тимлид", link: "https://drive.google.com/alpha/work2", score: 70, comment: "⚠️ Хорошо, но не хватает сроков.", isChecked: false, submittedAt: "2025-04-21" },
-            { id: 3, workNumber: 3, title: "Работа 3", role: "Разработчик", link: "https://drive.google.com/alpha/work3", score: 0, comment: "⏳ Ожидает проверки", isChecked: false, submittedAt: "2025-04-22" }
-        ],
-        2: [
-            { id: 4, workNumber: 1, title: "Работа 1", role: "Аналитик", link: "https://drive.google.com/beta/work1", score: 92, comment: "✅ Отличная работа!", isChecked: true, submittedAt: "2025-04-20" },
-            { id: 5, workNumber: 2, title: "Работа 2", role: "Тимлид", link: "https://drive.google.com/beta/work2", score: 88, comment: "✅ Принято", isChecked: true, submittedAt: "2025-04-21" }
-        ],
-        3: [
-            { id: 6, workNumber: 1, title: "Работа 1", role: "Аналитик", link: "https://drive.google.com/gamma/work1", score: 45, comment: "❌ Требуется переделка", isChecked: false, submittedAt: "2025-04-19" },
-            { id: 7, workNumber: 2, title: "Работа 2", role: "Тимлид", link: "https://drive.google.com/gamma/work2", score: 60, comment: "⚠️ Нужно доработать", isChecked: false, submittedAt: "2025-04-20" }
-        ]
+    const API_BASE = 'http://localhost:8000';
+    let currentUser = { isLoggedIn: false, role: null, email: null, userId: null, teamId: null, teamName: null };
+    let currentProjectForExport = null;
+    let allProjects = [];
+
+    // Кастомные названия работ (по ID проекта или submission)
+    const customWorkNames = {
+        1: "Аналитика. Первая версия",
+        2: "Аналитика. Вторая версия",
+        3: "Сценарий. Первая версия",
+        4: "Сценарий. Вторая версия",
+        5: "Дизайн. Первая версия",
+        6: "Дизайн. Вторая версия",
+        7: "Работа тимлида. Первая версия",
+        8: "Работа тимлида. Вторая версия",
+        9: "Работа разработчика. Первая версия",
+        10: "Работа разработчика. Вторая версия"
     };
-    
-    // ВЗАИМОПРОВЕРКА (для студента)
-    const PEER_REVIEWS = {
-        1: [{ studentName: "Мария", comment: "Хорошая работа, но можно лучше оформить." }, { studentName: "Алексей", comment: "Согласен, анализ логичный." }],
-        2: [{ studentName: "Дмитрий", comment: "План чёткий, молодец!" }],
-        4: [{ studentName: "Екатерина", comment: "Отлично, всё понятно." }, { studentName: "Павел", comment: "Добавил бы графики." }],
-        5: [{ studentName: "Ольга", comment: "Тимлид хороший, всё по срокам." }],
-        6: [{ studentName: "Иван", comment: "Много ошибок, переделайте." }],
-        7: [{ studentName: "Светлана", comment: "Неплохо, но можно улучшить." }]
-    };
-    
-    // ========== ДАННЫЕ ДЛЯ ОРГАНИЗАТОРА ==========
-    // Список работ (тем)
-    const WORK_TOPICS = [
-        { id: 1, name: "Работа 1", startDate: "2025-04-01", endDate: "2025-04-20" },
-        { id: 2, name: "Работа 2", startDate: "2025-04-10", endDate: "2025-04-25" },
-        { id: 3, name: "Работа 3", startDate: "2025-04-15", endDate: "2025-05-01" },
-        { id: 4, name: "Работа 4", startDate: "2025-04-20", endDate: "2025-05-05" },
-        { id: 5, name: "Работа 5", startDate: "2025-04-25", endDate: "2025-05-10" }
-    ];
-    
-    // Результаты работ по командам (баллы и комментарии от эксперта)
-    const WORK_RESULTS = {
-        1: {
-            1: { score: 85, comment: "✅ Отличный анализ, но можно глубже.", checkedBy: "Елена Викторовна", checkedAt: "2025-04-15" },
-            2: { score: 92, comment: "✅ Отличная работа!", checkedBy: "Елена Викторовна", checkedAt: "2025-04-16" },
-            3: { score: 45, comment: "❌ Требуется переделка.", checkedBy: "Дмитрий Сергеевич", checkedAt: "2025-04-14" },
-            4: { score: 78, comment: "⚠️ Хорошо, но есть недочёты.", checkedBy: "Анна Игоревна", checkedAt: "2025-04-18" }
-        },
-        2: {
-            1: { score: 70, comment: "⚠️ Не хватает сроков.", checkedBy: "Елена Викторовна", checkedAt: "2025-04-22" },
-            2: { score: 88, comment: "✅ Принято.", checkedBy: "Дмитрий Сергеевич", checkedAt: "2025-04-23" },
-            3: { score: 60, comment: "⚠️ Нужно доработать.", checkedBy: "Анна Игоревна", checkedAt: "2025-04-21" },
-            4: { score: 95, comment: "✅ Отлично!", checkedBy: "Елена Викторовна", checkedAt: "2025-04-24" }
-        },
-        3: {
-            1: { score: 0, comment: "⏳ Ожидает проверки", checkedBy: null, checkedAt: null },
-            2: { score: 75, comment: "📝 Принято с замечаниями.", checkedBy: "Дмитрий Сергеевич", checkedAt: "2025-04-28" },
-            3: { score: 0, comment: "⏳ Ожидает проверки", checkedBy: null, checkedAt: null },
-            4: { score: 82, comment: "✅ Хорошо.", checkedBy: "Анна Игоревна", checkedAt: "2025-04-29" }
-        },
-        4: {
-            1: { score: 0, comment: "⏳ Ожидает проверки", checkedBy: null, checkedAt: null },
-            2: { score: 0, comment: "⏳ Ожидает проверки", checkedBy: null, checkedAt: null },
-            3: { score: 0, comment: "⏳ Ожидает проверки", checkedBy: null, checkedAt: null },
-            4: { score: 0, comment: "⏳ Ожидает проверки", checkedBy: null, checkedAt: null }
-        },
-        5: {
-            1: { score: 0, comment: "⏳ Ожидает проверки", checkedBy: null, checkedAt: null },
-            2: { score: 0, comment: "⏳ Ожидает проверки", checkedBy: null, checkedAt: null },
-            3: { score: 0, comment: "⏳ Ожидает проверки", checkedBy: null, checkedAt: null },
-            4: { score: 0, comment: "⏳ Ожидает проверки", checkedBy: null, checkedAt: null }
+    function getCustomWorkName(originalName, id) {
+        if (customWorkNames[id]) return customWorkNames[id];
+        for (const [key, value] of Object.entries(customWorkNames)) {
+            if (originalName && originalName.includes(key)) return value;
         }
-    };
-    
-    const ALL_TEACHERS = ["Елена Викторовна", "Дмитрий Сергеевич", "Анна Игоревна"];
-    
-    let currentUser = { isLoggedIn: false, role: null, email: null, teamId: null, teamName: null };
-    
-    // ========== СТУДЕНТ: РЕЖИМ 1 (ЭКСПЕРТ) ==========
-    function renderExpertMode() {
-        const works = WORKS_EXPERT[currentUser.teamId] || [];
-        let filtered = [...works];
+        return originalName;
+    }
+
+    async function checkServer() {
+        const statusDiv = document.getElementById('serverStatus');
+        statusDiv.innerHTML = 'Проверка подключения...';
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            const response = await fetch(`${API_BASE}/health`, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            if (response.ok) {
+                statusDiv.innerHTML = '<span style="color: #10b981;">✅ Сервер работает</span>';
+                return true;
+            } else {
+                statusDiv.innerHTML = '<span style="color: #ef4444;">❌ Ошибка сервера</span>';
+                return false;
+            }
+        } catch (error) {
+            statusDiv.innerHTML = '<span style="color: #ef4444;">❌ Сервер не доступен! Запустите: uvicorn main:app --reload</span>';
+            return false;
+        }
+    }
+
+    async function apiRequest(endpoint, options = {}) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        try {
+            const response = await fetch(`${API_BASE}${endpoint}`, {
+                headers: { 'Content-Type': 'application/json' },
+                signal: controller.signal,
+                ...options
+            });
+            clearTimeout(timeoutId);
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({ detail: `HTTP ${response.status}` }));
+                throw new Error(error.detail || `Ошибка ${response.status}`);
+            }
+            return response.status === 204 ? null : await response.json();
+        } catch (error) {
+            clearTimeout(timeoutId);
+            console.error(`API Error ${endpoint}:`, error);
+            throw error;
+        }
+    }
+
+    async function login(email) {
+        if (!email || !email.includes('@')) {
+            alert('❌ Введите корректный email');
+            return;
+        }
+        const loginBtn = document.getElementById('loginBtn');
+        const originalText = loginBtn.textContent;
+        loginBtn.textContent = '⏳ Вход...';
+        loginBtn.disabled = true;
+        try {
+            const serverOk = await checkServer();
+            if (!serverOk) throw new Error('Сервер не запущен');
+            const user = await apiRequest('/auth/web', { method: 'POST', body: JSON.stringify({ email }) });
+            currentUser = {
+                isLoggedIn: true,
+                role: user.academic_role,
+                email: email,
+                userId: user.user_id
+            };
+            if (user.academic_role === 'student') {
+                try {
+                    const userData = await apiRequest(`/users/${user.user_id}`);
+                    currentUser.teamId = userData.team_id;
+                    if (currentUser.teamId) {
+                        const teamData = await apiRequest(`/teams/${currentUser.teamId}`);
+                        currentUser.teamName = teamData.name;
+                    }
+                } catch (e) { console.log(e); }
+            }
+            document.getElementById('appContent').style.display = 'block';
+            document.getElementById('userInfo').innerHTML = `<span>✅ ${email} <span class="role-badge">${user.academic_role === 'student' ? 'Студент' : 'Организатор'}</span></span>`;
+            if (currentUser.role === 'student') {
+                document.getElementById('studentView').style.display = 'block';
+                document.getElementById('organizerView').style.display = 'none';
+                if (currentUser.teamName) {
+                    document.getElementById('studentTeamName').innerHTML = `🏆 Команда: ${escapeHtml(currentUser.teamName)}`;
+                } else {
+                    document.getElementById('studentTeamName').innerHTML = `🏆 Команда не назначена`;
+                }
+                await loadStudentWorks();
+                attachStudentTabs();
+            } else if (currentUser.role === 'org') {
+                document.getElementById('studentView').style.display = 'none';
+                document.getElementById('organizerView').style.display = 'block';
+                await loadProjectsList();
+                attachOrgFilters();
+            } else {
+                alert('Роль "эксперт" требует использования Telegram бота');
+                logout();
+            }
+        } catch (error) {
+            alert(`❌ Ошибка входа: ${error.message}`);
+        } finally {
+            loginBtn.textContent = originalText;
+            loginBtn.disabled = false;
+        }
+    }
+
+    // СТУДЕНТ
+    async function loadStudentWorks() {
+        await loadExpertMode();
+        await loadPeerMode();
+    }
+
+    async function loadExpertMode() {
+    try {
+        let submissions = await apiRequest(`/submissions/student/${currentUser.userId}/list?mode=1`);
+        const searchTitle = document.getElementById('searchTitle')?.value.toLowerCase();
+        const searchDate = document.getElementById('searchDate')?.value;
         
-        const searchTitle = document.getElementById('searchTitle')?.value.toLowerCase() || '';
-        const searchDate = document.getElementById('searchDate')?.value || '';
-        
-        if (searchTitle) filtered = filtered.filter(w => w.title.toLowerCase().includes(searchTitle));
-        if (searchDate) filtered = filtered.filter(w => w.submittedAt === searchDate);
+        if (submissions) {
+            if (searchTitle) {
+                submissions = submissions.filter(sub => {
+                    const displayName = getCustomWorkName(sub.project_name, sub.id);
+                    return displayName.toLowerCase().includes(searchTitle);
+                });
+            }
+            if (searchDate) {
+                submissions = submissions.filter(sub => new Date(sub.created_at).toISOString().split('T')[0] === searchDate);
+            }
+        }
         
         const container = document.getElementById('expertWorksList');
-        if (!container) return;
+        if (!submissions || submissions.length === 0) {
+            container.innerHTML = '<div class="note">📭 Нет работ в режиме 1</div>';
+            return;
+            }
+                let html = '';
+                for (const sub of submissions) {
+                    let statusClass = 'status-pending', statusText = '⏳ Ожидает';
+                    if (sub.status === 'checked') { statusClass = 'status-checked'; statusText = '✅ Проверена'; }
+                    else if (sub.status === 'checking') { statusClass = 'status-checking'; statusText = '🔄 На проверке'; }
+                    const displayName = getCustomWorkName(sub.project_name, sub.id);
+                    html += `<div class="work-card" data-submission-id="${sub.id}" data-mode="1">
+                                <div><strong>📄 ${escapeHtml(displayName)}</strong></div>
+                                <div style="display: flex; justify-content: space-between; margin-top: 8px;">
+                                    <span class="status-badge ${statusClass}">${statusText}</span>
+                                    <span>📅 ${new Date(sub.created_at).toLocaleDateString()}</span>
+                                </div>
+                            </div>`;
+                }
+                container.innerHTML = html;
+                document.querySelectorAll('#expertWorksList .work-card').forEach(card => {
+                    card.addEventListener('click', () => openStudentModal(card.dataset.submissionId, 'mode1'));
+                });
+            } catch (error) {
+                document.getElementById('expertWorksList').innerHTML = `<div class="error">❌ ${error.message}</div>`;
+        }
+    }
+
+    async function loadPeerMode(searchTerm = '', filterDate = '') {
+    try {
+        let submissions = await apiRequest(`/submissions/student/${currentUser.userId}/list?mode=2`);
         
-        let html = '';
-        filtered.forEach(work => {
-            const statusClass = work.isChecked ? 'status-checked' : 'status-pending';
-            const statusText = work.isChecked ? '✅ Проверена' : '⏳ Не проверена';
-            html += `
-                <div class="work-card" data-work='${JSON.stringify({ ...work, mode: 'expert' })}'>
-                    <div><strong>${work.title}</strong> (${work.role})</div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-                        <span class="status-badge ${statusClass}">${statusText}</span>
-                        <span>📅 ${work.submittedAt}</span>
-                    </div>
-                </div>
-            `;
-        });
-        container.innerHTML = html || '<div class="note">Работ не найдено</div>';
-        
-        document.querySelectorAll('#expertWorksList .work-card').forEach(card => {
-            card.addEventListener('click', () => {
-                const work = JSON.parse(card.dataset.work);
-                openExpertModal(work);
+        // Фильтрация по названию
+        if (searchTerm) {
+            submissions = submissions.filter(sub => {
+                const displayName = getCustomWorkName(sub.project_name, sub.id);
+                return displayName.toLowerCase().includes(searchTerm);
             });
-        });
-    }
-    
-    function openExpertModal(work) {
-        const modalBody = document.getElementById('modalBody');
-        document.getElementById('modalTitle').innerText = work.title;
-        document.getElementById('exportBtn').style.display = 'none';
-        modalBody.innerHTML = `
-            <div style="background:#f1f5f9; padding:0.8rem; border-radius:16px; margin:0.5rem 0;">
-                <strong>👤 Роль:</strong> ${work.role}
-            </div>
-            <div><strong>🔗 Ссылка:</strong> <a href="${work.link}" target="_blank">Открыть Google Диск</a></div>
-            <div style="margin-top: 1rem;">
-                <strong>⭐ Оценка эксперта:</strong> <span class="score">${work.score} баллов</span>
-            </div>
-            <div style="margin-top: 0.5rem;">
-                <strong>💬 Комментарий эксперта:</strong><br>
-                <div style="background:#f1f5f9; padding:0.8rem; border-radius:16px; margin-top: 0.3rem;">${work.comment}</div>
-            </div>
-        `;
-        document.getElementById('workModal').style.display = 'block';
-    }
-    
-    // ========== СТУДЕНТ: РЕЖИМ 2 (ВЗАИМОПРОВЕРКА) ==========
-    function renderPeerMode() {
-        const works = WORKS_EXPERT[currentUser.teamId] || [];
-        const container = document.getElementById('peerWorksList');
-        if (!container) return;
-        
-        let html = '';
-        works.forEach(work => {
-            const peerReviews = PEER_REVIEWS[work.id] || [];
-            const hasReviews = peerReviews.length > 0;
-            html += `
-                <div class="work-card" data-work-id="${work.id}" data-work-title="${work.title}" data-work-role="${work.role}" data-reviews='${JSON.stringify(peerReviews)}'>
-                    <div><strong>${work.title}</strong> (${work.role})</div>
-                    <div style="margin-top: 8px;">
-                        <span class="status-badge ${hasReviews ? 'status-checked' : 'status-pending'}">
-                            ${hasReviews ? `📝 ${peerReviews.length} комментариев` : 'Нет комментариев'}
-                        </span>
-                    </div>
-                </div>
-            `;
-        });
-        container.innerHTML = html || '<div class="note">Нет работ для взаимопроверки</div>';
-        
-        document.querySelectorAll('#peerWorksList .work-card').forEach(card => {
-            card.addEventListener('click', () => {
-                const workId = parseInt(card.dataset.workId);
-                const workTitle = card.dataset.workTitle;
-                const workRole = card.dataset.workRole;
-                const reviews = JSON.parse(card.dataset.reviews);
-                openPeerModal(workTitle, workRole, reviews);
-            });
-        });
-    }
-    
-    function openPeerModal(title, role, reviews) {
-        const modalBody = document.getElementById('modalBody');
-        document.getElementById('modalTitle').innerText = title;
-        document.getElementById('exportBtn').style.display = 'none';
-        
-        let reviewsHtml = '';
-        if (reviews.length === 0) {
-            reviewsHtml = '<div class="note">Нет комментариев от других студентов</div>';
-        } else {
-            reviewsHtml = reviews.map(r => `
-                <div class="peer-review">
-                    <strong>👨‍🎓 ${r.studentName}:</strong><br>${r.comment}
-                </div>
-            `).join('');
         }
         
-        modalBody.innerHTML = `
-            <div style="background:#f1f5f9; padding:0.8rem; border-radius:16px; margin:0.5rem 0;">
-                <strong>👤 Роль:</strong> ${role}
-            </div>
-            <div><strong>💬 Комментарии от студентов (взаимопроверка):</strong></div>
-            <div style="margin-top: 0.5rem;">${reviewsHtml}</div>
-            <div class="note" style="margin-top: 1rem;">📌 Эту же работу проверяет и эксперт — результаты в режиме 1.</div>
-        `;
-        document.getElementById('workModal').style.display = 'block';
-    }
-    
-    // ========== ОРГАНИЗАТОР ==========
-    function renderOrganizerWorks() {
-        const container = document.getElementById('organizerWorksGrid');
-        let html = '';
+        // Фильтрация по дате
+        if (filterDate) {
+            submissions = submissions.filter(sub => {
+                const subDate = new Date(sub.created_at).toISOString().split('T')[0];
+                return subDate === filterDate;
+            });
+        }
         
-        WORK_TOPICS.forEach(work => {
-            const results = WORK_RESULTS[work.id] || {};
-            const totalTeams = TEAMS.length;
-            let checkedCount = 0;
-            for (let team of TEAMS) {
-                if (results[team.id] && results[team.id].score > 0) checkedCount++;
-            }
-            const isCompleted = checkedCount === totalTeams;
-            
-            html += `
-                <div class="org-work-card" data-work-id="${work.id}">
-                    <div class="work-title">📄 ${work.name}</div>
-                    <div class="date-info">📅 Начало: ${work.startDate}</div>
-                    <div class="date-info">✅ Окончание: ${work.endDate}</div>
-                    <div class="status-badge ${isCompleted ? 'status-completed' : 'status-progress'}">
-                        ${isCompleted ? '✓ Проверка завершена' : `⏳ Проверено ${checkedCount}/${totalTeams}`}
+        const container = document.getElementById('peerWorksList');
+        if (!submissions || submissions.length === 0) {
+            container.innerHTML = '<div class="note">📭 Нет работ в режиме 2</div>';
+            return;
+        }
+        let html = '';
+        for (const sub of submissions) {
+            const displayName = getCustomWorkName(sub.project_name, sub.id);
+            html += `<div class="work-card" data-submission-id="${sub.id}" data-mode="2">
+                        <div><strong>📄 ${escapeHtml(displayName)}</strong></div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 8px;">
+                            <span class="status-badge status-checked">💬 ${sub.comment_count || 0} комментариев</span>
+                            <span>📅 ${new Date(sub.created_at).toLocaleDateString()}</span>
+                        </div>
+                    </div>`;
+        }
+        container.innerHTML = html;
+        document.querySelectorAll('#peerWorksList .work-card').forEach(card => {
+            card.addEventListener('click', () => openStudentModal(card.dataset.submissionId, 'mode2'));
+        });
+    } catch (error) {
+        document.getElementById('peerWorksList').innerHTML = `<div class="error">❌ ${error.message}</div>`;
+    }
+}
+    async function openStudentModal(submissionId, mode) {
+        try {
+            const modalBody = document.getElementById('modalBody');
+            document.getElementById('exportModalBtn').style.display = 'none';
+            if (mode === 'mode1') {
+                const detail = await apiRequest(`/submissions/${submissionId}/detail/mode1?user_id=${currentUser.userId}`);
+                let artifactsHtml = '';
+                if (detail.artifacts && detail.artifacts.length) {
+                    artifactsHtml = '<div><strong>🔗 Артефакты:</strong><div style="margin-top: 0.5rem;">';
+                    detail.artifacts.forEach(a => {
+                        artifactsHtml += `<a href="${escapeHtml(a.url)}" target="_blank" class="artifact-link">📎 ${escapeHtml(a.url)}</a>`;
+                    });
+                    artifactsHtml += '</div></div>';
+                }
+                document.getElementById('modalTitle').innerText = getCustomWorkName(detail.project_name, submissionId);
+                modalBody.innerHTML = `
+                    <div><strong>📄 Содержание работы:</strong></div>
+                    <div style="background:#f8fafc; padding:1rem; border-radius:16px; margin:0.5rem 0;">${escapeHtml(detail.content || 'Нет описания')}</div>
+                    ${artifactsHtml}
+                    <div style="margin-top: 1rem; text-align: center; padding: 1rem; background: #eef2ff; border-radius: 16px;">
+                        <div style="font-size: 0.9rem;">Общий балл</div>
+                        <div class="score">${detail.total_mark || 0}</div>
                     </div>
-                </div>
-            `;
+                    <div style="margin-top: 1rem;"><strong>💬 Комментарий эксперта:</strong>
+                    <div style="background:#f1f5f9; padding:0.8rem; border-radius:16px; margin-top: 0.3rem;">${escapeHtml(detail.expert_comment || 'Нет комментария')}</div></div>
+                `;
+            } else {
+                const detail = await apiRequest(`/submissions/${submissionId}/detail/mode2?user_id=${currentUser.userId}`);
+                let commentsHtml = '';
+                if (detail.comments && detail.comments.length) {
+                    detail.comments.forEach(c => {
+                        commentsHtml += `<div style="background:#f1f5f9; padding:0.8rem; border-radius:16px; margin:0.5rem 0;">
+                            <strong>👨‍🎓 ${escapeHtml(c.author_name)}:</strong><br>${escapeHtml(c.comment)}
+                            <div style="font-size:0.75rem; margin-top:0.3rem;">📅 ${new Date(c.created_at).toLocaleString()}</div>
+                        </div>`;
+                    });
+                } else { commentsHtml = '<div class="note">Нет комментариев</div>'; }
+                document.getElementById('modalTitle').innerText = getCustomWorkName(detail.project_name, submissionId);
+                modalBody.innerHTML = `<div><strong>📄 Содержание работы:</strong></div>
+                    <div style="background:#f8fafc; padding:1rem; border-radius:16px; margin:0.5rem 0;">${escapeHtml(detail.content || 'Нет описания')}</div>
+                    <div><strong>💬 Отзывы студентов:</strong></div>${commentsHtml}`;
+            }
+            document.getElementById('workModal').style.display = 'block';
+        } catch (error) {
+            alert(`Ошибка: ${error.message}`);
+        }
+    }
+
+    // ОРГАНИЗАТОР
+    async function loadProjectsList() {
+        const container = document.getElementById('projectsList');
+        container.innerHTML = '<div class="loading">Загрузка проектов...</div>';
+        try {
+            allProjects = await apiRequest('/projects/?skip=0&limit=50');
+            renderOrgProjects();
+        } catch (error) {
+            console.error(error);
+            container.innerHTML = `<div class="error">❌ Ошибка загрузки проектов: ${error.message}<br>💡 Убедитесь, что сервер запущен: uvicorn main:app --reload</div>`;
+        }
+    }
+
+    function renderOrgProjects() {
+    const container = document.getElementById('projectsList');
+    let filtered = [...allProjects];
+    const searchTitle = document.getElementById('orgSearchTitle')?.value.toLowerCase() || '';
+    const searchDate = document.getElementById('orgSearchDate')?.value;
+    
+    if (searchTitle) {
+        filtered = filtered.filter(p => {
+            const displayName = getCustomWorkName(p.name, p.id);
+            return displayName.toLowerCase().includes(searchTitle);
+        });
+    }
+    if (searchDate) {
+        filtered = filtered.filter(p => new Date(p.deadline).toISOString().split('T')[0] === searchDate);
+    }
+        if (filtered.length === 0) {
+            container.innerHTML = '<div class="note">📭 Проектов не найдено</div>';
+            return;
+        }
+        let html = '';
+        filtered.forEach(project => {
+            const displayName = getCustomWorkName(project.name, project.id);
+            html += `<div class="work-card" data-project-id="${project.id}" data-project-name="${escapeHtml(displayName)}" data-project-deadline="${project.deadline}">
+                        <div><strong>📁 ${escapeHtml(displayName)}</strong></div>
+                        <div style="margin-top: 8px; color: #475569;">📅 Дедлайн: ${new Date(project.deadline).toLocaleDateString()}</div>
+                    </div>`;
         });
         container.innerHTML = html;
-        
-        document.querySelectorAll('.org-work-card').forEach(card => {
-            card.addEventListener('click', () => {
-                const workId = parseInt(card.dataset.workId);
-                openWorkModal(workId);
+        document.querySelectorAll('#projectsList .work-card').forEach(card => {
+            card.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const projectId = card.dataset.projectId;
+                const projectName = card.dataset.projectName;
+                const projectDeadline = card.dataset.projectDeadline;
+                document.getElementById('modalTitle').innerText = `📊 ${projectName}`;
+                document.getElementById('modalBody').innerHTML = '<div class="loading">Загрузка статистики...</div>';
+                document.getElementById('exportModalBtn').style.display = 'none';
+                document.getElementById('workModal').style.display = 'block';
+                await openProjectModal(projectId, projectName, projectDeadline);
             });
         });
     }
-    
-    function openWorkModal(workId) {
-        const work = WORK_TOPICS.find(w => w.id === workId);
-        const results = WORK_RESULTS[workId] || {};
-        
-        const totalTeams = TEAMS.length;
-        let checkedCount = 0;
-        let lastCheckedAt = null;
-        
-        for (let team of TEAMS) {
-            if (results[team.id] && results[team.id].score > 0) {
-                checkedCount++;
-                const checkedAt = results[team.id].checkedAt;
-                if (checkedAt && (!lastCheckedAt || checkedAt > lastCheckedAt)) {
-                    lastCheckedAt = checkedAt;
+
+    async function openProjectModal(projectId, projectName, projectDeadline) {
+        try {
+            const [dashboard, exportData, assignmentsData] = await Promise.all([
+                apiRequest(`/projects/${projectId}/dashboard`),
+                apiRequest(`/projects/${projectId}/export`),
+                apiRequest(`/assignments/history?reviewer_id=1&project_id=${projectId}`).catch(() => []) // пробуем получить назначения
+            ]);
+            
+            currentProjectForExport = { id: projectId, name: projectName, data: exportData };
+            
+            // ПОДСЧЁТ КОЛИЧЕСТВА ПРОВЕРОК (не уникальных работ!)
+            const expertChecksCount = {}; // сколько проверок сделал каждый эксперт
+            
+            if (exportData && Array.isArray(exportData)) {
+                for (const item of exportData) {
+                    // Если есть эксперт и он проверил работу
+                    if (item.expert_name && item.expert_name !== '—' && item.expert_name !== null && item.expert_name !== 'None') {
+                        expertChecksCount[item.expert_name] = (expertChecksCount[item.expert_name] || 0) + 1;
+                    }
                 }
             }
-        }
-        
-        const teacherStats = {};
-        ALL_TEACHERS.forEach(teacher => { teacherStats[teacher] = 0; });
-        
-        for (let team of TEAMS) {
-            const res = results[team.id];
-            if (res && res.checkedBy && res.score > 0) {
-                teacherStats[res.checkedBy] = (teacherStats[res.checkedBy] || 0) + 1;
+            
+            // Также учитываем данные из dashboard.experts (если там есть количество проверок)
+            if (dashboard && dashboard.experts) {
+                for (const exp of dashboard.experts) {
+                    if (exp.checked_count > 0) {
+                        expertChecksCount[exp.expert_name] = exp.checked_count;
+                    } else if (!expertChecksCount[exp.expert_name]) {
+                        expertChecksCount[exp.expert_name] = 0;
+                    }
+                }
             }
+            
+            // Общее количество проверенных работ (сумма проверок всех экспертов)
+            const totalChecksCompleted = Object.values(expertChecksCount).reduce((sum, count) => sum + count, 0);
+            
+            // Количество уникальных работ в проекте
+            const totalUniqueSubmissions = dashboard?.total_submissions || 0;
+            
+            // Количество работ, которые получили хотя бы одну проверку
+            const submissionsWithChecks = new Set();
+            if (exportData && Array.isArray(exportData)) {
+                for (const item of exportData) {
+                    if (item.team_id && item.total_score > 0) {
+                        submissionsWithChecks.add(item.team_id);
+                    }
+                }
+            }
+            const uniqueCheckedSubmissions = submissionsWithChecks.size;
+            
+            const percentComplete = totalUniqueSubmissions > 0 ? (uniqueCheckedSubmissions / totalUniqueSubmissions * 100).toFixed(1) : 0;
+            
+            let expertsHtml = '';
+            if (Object.keys(expertChecksCount).length > 0) {
+                const sortedExperts = Object.entries(expertChecksCount).sort();
+                for (const [expertName, count] of sortedExperts) {
+                    expertsHtml += `<div class="expert-stat"><span>👨‍🏫 ${escapeHtml(expertName)}</span><span>✅ Проверено работ: ${count}</span></div>`;
+                }
+            } else {
+                // Демо-данные, если API не вернул информацию
+                expertsHtml = `<div class="expert-stat"><span>👨‍🏫 Эксперт 1</span><span>✅ Проверено работ: 0</span></div>
+                               <div class="expert-stat"><span>👨‍🏫 Эксперт 2</span><span>✅ Проверено работ: 0</span></div>
+                               <div class="expert-stat"><span>👨‍🏫 Эксперт 3</span><span>✅ Проверено работ: 0</span></div>`;
+            }
+            
+            document.getElementById('modalBody').innerHTML = `
+                <div class="stats-summary">
+                    <div style="font-weight: bold; margin-bottom: 1rem;">📈 Статистика проекта</div>
+                    <div class="expert-stat"><span>📅 Дедлайн:</span><span>${new Date(projectDeadline).toLocaleDateString()} ${new Date(projectDeadline).toLocaleTimeString()}</span></div>
+                    <div class="expert-stat"><span>📝 Всего работ в проекте:</span><span>${totalUniqueSubmissions}</span></div>
+                    <div class="expert-stat"><span>⏳ Осталось проверить работ:</span><span>${totalUniqueSubmissions - uniqueCheckedSubmissions}</span></div>
+                    <div class="progress-bar"><div class="progress-fill" style="width: ${percentComplete}%;"></div></div>
+                    <div style="text-align: center; font-size: 0.85rem;">${percentComplete}% работ проверено</div>
+                </div>
+                <h4>👥 Активность экспертов</h4>
+                <div style="background: #f8fafc; padding: 1rem; border-radius: 16px; margin: 1rem 0;">
+                    ${expertsHtml}
+                </div>
+            `;
+            const exportBtn = document.getElementById('exportModalBtn');
+            exportBtn.style.display = 'block';
+            exportBtn.onclick = () => exportProjectResults();
+        } catch (error) {
+            console.error('Open project modal error:', error);
+            document.getElementById('modalBody').innerHTML = `<div class="error">❌ Ошибка загрузки данных: ${error.message}<br><br>💡 Проверьте консоль браузера (F12)</div>`;
         }
-        
-        const csvData = [];
-        for (let team of TEAMS) {
-            const res = results[team.id] || { score: 0, comment: "Не проверено", checkedBy: "—", checkedAt: "—" };
-            csvData.push({
-                teamId: team.id,
-                teamName: team.name,
-                score: res.score,
-                comment: res.comment,
-                checkedBy: res.checkedBy || "—",
-                checkedAt: res.checkedAt || "—"
-            });
+    }
+
+    async function exportProjectResults() {
+        if (!currentProjectForExport) return;
+        try {
+            const data = currentProjectForExport.data;
+            const headers = ['Название команды', 'Баллы', 'Комментарий эксперта', 'Эксперт', 'Дата проверки'];
+            const rows = data.map(item => [item.team_name, item.total_score, item.comment || '—', item.expert_name || '—', item.check_date ? new Date(item.check_date).toLocaleDateString() : '—']);
+            const csvContent = [headers, ...rows].map(row => row.join(';')).join('\n');
+            const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.href = url;
+            link.download = `${currentProjectForExport.name}_results_${new Date().toISOString().slice(0,19)}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            alert('✅ Таблица выгружена успешно!');
+        } catch (error) {
+            alert(`❌ Ошибка выгрузки: ${error.message}`);
         }
-        
-        document.getElementById('modalTitle').innerText = work.name;
-        
-        let teachersTableHtml = `<table><thead><tr><th>Имя преподавателя</th><th>Количество проверенных работ</th></tr></thead><tbody>`;
-        for (let [teacher, count] of Object.entries(teacherStats)) {
-            teachersTableHtml += `<tr><td>${teacher}</td><td>${count}</td></tr>`;
-        }
-        teachersTableHtml += `</tbody></table>`;
-        
-        const modalBody = document.getElementById('modalBody');
-        modalBody.innerHTML = `
-            <div class="stats-summary">
-                <strong>📊 Общая статистика:</strong><br>
-                Всего работ: ${totalTeams}<br>
-                Проверено: ${checkedCount}<br>
-                Осталось: ${totalTeams - checkedCount}
-            </div>
-            <h4>👥 Преподаватели</h4>
-            ${teachersTableHtml}
-            <div style="margin-top: 1rem;">
-                <strong>📅 Дата последней проверки:</strong> ${lastCheckedAt || '—'}
-            </div>
-        `;
-        
-        const exportBtn = document.getElementById('exportBtn');
-        exportBtn.style.display = 'block';
-        exportBtn.onclick = () => exportToCSV(work.name, csvData);
-        
-        document.getElementById('workModal').style.display = 'block';
     }
-    
-    function exportToCSV(workName, data) {
-        const headers = ['ID команды', 'Название команды', 'Баллы', 'Комментарий эксперта', 'Проверил', 'Дата проверки'];
-        const rows = data.map(item => [item.teamId, item.teamName, item.score, item.comment, item.checkedBy, item.checkedAt]);
-        const csvContent = [headers, ...rows].map(row => row.join(';')).join('\n');
-        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.href = url;
-        link.setAttribute('download', `${workName}_результаты.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    }
-    
-    // ========== АВТОРИЗАЦИЯ ==========
-    function getTeamIdByEmail(email) {
-        if (email.includes('beta')) return 2;
-        if (email.includes('gamma')) return 3;
-        return 1;
-    }
-    
+
     function attachStudentTabs() {
         const btns = document.querySelectorAll('#studentMainTabs .tab-btn');
         const contents = document.querySelectorAll('#studentView .tab-content');
@@ -611,65 +745,108 @@
                 document.getElementById(tabId).classList.add('active');
                 btns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                if (tabId === 'expertTab') renderExpertMode();
-                if (tabId === 'peerTab') renderPeerMode();
+                
+                // Обновляем данные при переключении вкладок
+                if (tabId === 'expertTab') {
+                    loadExpertMode();
+                } else if (tabId === 'peerTab') {
+                    loadPeerMode();
+                }
             };
         });
-    }
-    
-    function closeModal() { document.getElementById('workModal').style.display = 'none'; }
-    
-    function login(email) {
-        if (!email || !email.includes('@')) { alert('Введите корректный email'); return; }
         
-        if (email === 'org@example.com') {
-            currentUser = { isLoggedIn: true, role: 'organizer', email };
-            document.getElementById('studentView').style.display = 'none';
-            document.getElementById('organizerView').style.display = 'block';
-            renderOrganizerWorks();
-        } else {
-            const teamId = getTeamIdByEmail(email);
-            const team = TEAMS.find(t => t.id === teamId);
-            currentUser = { isLoggedIn: true, role: 'student', email, teamId, teamName: team.name };
-            document.getElementById('studentView').style.display = 'block';
-            document.getElementById('organizerView').style.display = 'none';
-            document.getElementById('studentTeamName').innerText = `🏆 ${team.name}`;
-            renderExpertMode();
-            renderPeerMode();
-            attachStudentTabs();
-            
-            const searchInput = document.getElementById('searchTitle');
-            const dateInput = document.getElementById('searchDate');
-            const clearBtn = document.getElementById('clearSearch');
-            if (searchInput) searchInput.oninput = () => renderExpertMode();
-            if (dateInput) dateInput.onchange = () => renderExpertMode();
-            if (clearBtn) clearBtn.onclick = () => {
-                if (searchInput) searchInput.value = '';
-                if (dateInput) dateInput.value = '';
-                renderExpertMode();
-            };
+        // Обработчики для экспертного режима
+        document.getElementById('refreshExpert')?.addEventListener('click', () => loadExpertMode());
+        document.getElementById('clearSearch')?.addEventListener('click', () => {
+            document.getElementById('searchTitle').value = '';
+            document.getElementById('searchDate').value = '';
+            loadExpertMode();
+        });
+        document.getElementById('searchTitle')?.addEventListener('input', () => loadExpertMode());
+        document.getElementById('searchDate')?.addEventListener('change', () => loadExpertMode());
+        
+        // Обработчики для режима взаимопроверки
+document.getElementById('refreshPeer')?.addEventListener('click', () => {
+    const searchTerm = document.getElementById('peerSearchTitle')?.value.toLowerCase() || '';
+    const filterDate = document.getElementById('peerSearchDate')?.value || '';
+    loadPeerMode(searchTerm, filterDate);
+});
+
+const peerSearchInput = document.getElementById('peerSearchTitle');
+if (peerSearchInput) {
+    peerSearchInput.addEventListener('input', (e) => {
+        const filterDate = document.getElementById('peerSearchDate')?.value || '';
+        loadPeerMode(e.target.value.toLowerCase(), filterDate);
+    });
+}
+
+const peerSearchDate = document.getElementById('peerSearchDate');
+if (peerSearchDate) {
+    peerSearchDate.addEventListener('change', (e) => {
+        const searchTerm = document.getElementById('peerSearchTitle')?.value.toLowerCase() || '';
+        loadPeerMode(searchTerm, e.target.value);
+    });
+}
+
+        const clearPeerSearch = document.getElementById('clearPeerSearch');
+        if (clearPeerSearch) {
+            clearPeerSearch.addEventListener('click', () => {
+                const peerSearchInput = document.getElementById('peerSearchTitle');
+                const peerSearchDate = document.getElementById('peerSearchDate');
+                if (peerSearchInput) peerSearchInput.value = '';
+                if (peerSearchDate) peerSearchDate.value = '';
+                loadPeerMode('', '');
+            });
         }
-        document.getElementById('appContent').style.display = 'block';
-        document.getElementById('userInfo').innerHTML = `<span>✅ ${email} <span class="role-badge">${currentUser.role === 'student' ? 'Студент' : 'Организатор'}</span></span>`;
     }
-    
+
+    function attachOrgFilters() {
+        const searchTitle = document.getElementById('orgSearchTitle');
+        const searchDate = document.getElementById('orgSearchDate');
+        const clearBtn = document.getElementById('clearOrgSearch');
+        if (searchTitle) searchTitle.addEventListener('input', () => renderOrgProjects());
+        if (searchDate) searchDate.addEventListener('change', () => renderOrgProjects());
+        if (clearBtn) clearBtn.addEventListener('click', () => {
+            if (searchTitle) searchTitle.value = '';
+            if (searchDate) searchDate.value = '';
+            renderOrgProjects();
+        });
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
     function logout() {
-        currentUser = { isLoggedIn: false, role: null, email: null, teamId: null };
+        currentUser = { isLoggedIn: false, role: null, email: null, userId: null };
         document.getElementById('appContent').style.display = 'none';
         document.getElementById('userInfo').innerHTML = '';
         closeModal();
     }
-    
+
+    function closeModal() {
+        document.getElementById('workModal').style.display = 'none';
+        currentProjectForExport = null;
+    }
+
     document.getElementById('loginBtn').onclick = () => login(document.getElementById('emailInput').value);
+    document.getElementById('checkServerBtn').onclick = () => checkServer();
+    document.getElementById('refreshProjects')?.addEventListener('click', () => loadProjectsList());
     document.querySelector('.close-modal').onclick = closeModal;
     window.onclick = (e) => { if (e.target.classList.contains('modal')) closeModal(); };
-    
     const logoutBtn = document.createElement('button');
     logoutBtn.textContent = 'Выйти';
+    logoutBtn.className = 'danger';
     logoutBtn.style.marginLeft = '10px';
     logoutBtn.onclick = logout;
-    document.querySelector('#authPanel .flex-row').appendChild(logoutBtn);
-    
+    document.querySelector('.flex-row').appendChild(logoutBtn);
+    checkServer();
     logout();
 </script>
 </body>
