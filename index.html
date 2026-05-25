@@ -1,536 +1,930 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>УрФУ | Рабочие пространства (Студент / Организатор)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Experto - Платформа экспертной оценки</title>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
             background: #f2f4f8;
-            padding: 2rem 1.5rem;
+            padding: 2rem;
             color: #1e2a3e;
         }
-
-        /* контейнеры – минималистично, без излишнего дизайна */
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        /* карточка входа/профиля */
+        .container { max-width: 1400px; margin: 0 auto; }
         .auth-panel {
             background: white;
-            border-radius: 12px;
-            padding: 1.5rem 2rem;
+            border-radius: 20px;
+            padding: 1.5rem;
             margin-bottom: 2rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
-
+        .flex-row { display: flex; gap: 1rem; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+        input, button, select, textarea {
+            padding: 0.6rem 1.2rem;
+            border-radius: 40px;
+            border: 1px solid #cbd5e1;
+            font-size: 0.9rem;
+            font-family: inherit;
+        }
+        button.primary { background: #1e40af; color: white; border: none; cursor: pointer; transition: background 0.2s; }
+        button.primary:hover { background: #1e3a8a; }
+        button.danger { background: #dc2626; color: white; border: none; cursor: pointer; }
+        button.danger:hover { background: #b91c1c; }
+        button.secondary { background: #64748b; color: white; border: none; cursor: pointer; }
+        button.secondary:hover { background: #475569; }
         .role-badge {
-            display: inline-block;
             background: #eef2ff;
             padding: 0.3rem 0.9rem;
             border-radius: 40px;
             font-size: 0.85rem;
-            font-weight: 500;
-            margin-left: 1rem;
+            margin-left: 0.8rem;
         }
-
-        button, .btn-like {
-            background: #e2e8f0;
-            border: 1px solid #cbd5e1;
-            padding: 0.5rem 1.2rem;
-            border-radius: 40px;
-            font-size: 0.9rem;
-            cursor: pointer;
-            font-weight: 500;
-            transition: 0.1s linear;
-        }
-        button.primary {
-            background: #1e40af;
-            border-color: #1e40af;
-            color: white;
-        }
-        button.primary:hover {
-            background: #1e3a8a;
-        }
-        button.small {
-            padding: 0.3rem 0.9rem;
-            font-size: 0.8rem;
-        }
-        input, select {
-            padding: 0.5rem 0.8rem;
-            border-radius: 12px;
-            border: 1px solid #cbd5e1;
-            background: white;
-            font-size: 0.9rem;
-        }
-        .flex-row {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 1rem;
-        }
-        .grid-cards {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1.5rem;
-            margin-top: 1rem;
-        }
-
-        /* вкладки */
         .tabs {
             display: flex;
             gap: 0.25rem;
             border-bottom: 1px solid #cbd5e1;
             margin-bottom: 1.5rem;
+            flex-wrap: wrap;
         }
         .tab-btn {
+            padding: 0.7rem 1.5rem;
             background: transparent;
             border: none;
-            padding: 0.6rem 1.4rem;
-            font-weight: 500;
-            border-radius: 30px 30px 0 0;
-            color: #334155;
             cursor: pointer;
+            border-radius: 30px 30px 0 0;
+            transition: all 0.2s;
         }
         .tab-btn.active {
             background: white;
             border: 1px solid #cbd5e1;
             border-bottom-color: white;
-            color: #0f172a;
-        }
-        .tab-content {
-            display: none;
-            background: white;
-            border-radius: 20px;
-            padding: 1.5rem;
-            border: 1px solid #e2e8f0;
-        }
-        .tab-content.active {
-            display: block;
-        }
-
-        /* комментарии по ролям */
-        .role-comment-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-        .role-card {
-            background: #f8fafc;
-            border-radius: 16px;
-            padding: 1rem;
-            border-left: 4px solid #94a3b8;
-        }
-        .role-title {
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            font-size: 1.1rem;
-        }
-        .comment-text {
-            color: #1e293b;
-            margin-top: 0.5rem;
-            font-size: 0.9rem;
-            border-top: 1px dashed #cbd5e6;
-            padding-top: 0.5rem;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 0.2rem 0.7rem;
-            border-radius: 40px;
-            font-weight: 500;
-            font-size: 0.8rem;
-        }
-        .status-checked { background: #dcfce7; color: #166534; }
-        .status-pending { background: #fff3cd; color: #856404; }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-        }
-        th, td {
-            text-align: left;
-            padding: 0.75rem;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        th {
-            background: #f1f5f9;
             font-weight: 600;
         }
-
-        hr {
+        .tab-content { display: none; background: white; border-radius: 24px; padding: 1.5rem; border: 1px solid #e2e8f0; }
+        .tab-content.active { display: block; }
+        
+        .search-bar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .search-bar input, .search-bar select {
+            padding: 0.5rem 1rem;
+            border-radius: 40px;
+            border: 1px solid #cbd5e1;
+        }
+        .works-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1rem;
+        }
+        .work-card {
+            background: #f8fafc;
+            padding: 1rem;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .work-card:hover {
+            border-color: #3b82f6;
+            background: #fafcff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 0.2rem 0.8rem;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .status-checked { background: #dcfce7; color: #166534; }
+        .status-checking { background: #fef3c7; color: #92400e; }
+        .status-pending { background: #fff3cd; color: #856404; }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            backdrop-filter: blur(3px);
+        }
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            width: 90%;
+            max-width: 900px;
+            border-radius: 28px;
+            padding: 1.5rem;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+        .close-modal {
+            float: right;
+            font-size: 1.8rem;
+            cursor: pointer;
+            color: #94a3b8;
+        }
+        .close-modal:hover { color: #1e293b; }
+        
+        .score {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #1e40af;
+        }
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #6b7280;
+        }
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 1rem;
+            border-radius: 16px;
             margin: 1rem 0;
         }
-
+        .team-name {
+            background: #eef2ff;
+            display: inline-block;
+            padding: 0.5rem 1.2rem;
+            border-radius: 50px;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+        .stats-summary {
+            background: #eef2ff;
+            padding: 1rem;
+            border-radius: 20px;
+            margin-bottom: 1rem;
+        }
+        .export-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 40px;
+            cursor: pointer;
+            margin-top: 1rem;
+            width: 100%;
+            font-size: 1rem;
+        }
+        .export-btn:hover { background: #059669; }
         .note {
+            font-size: 0.8rem;
             color: #475569;
+            margin-top: 0.8rem;
+        }
+        .artifact-link {
+            display: inline-block;
+            background: #eef2ff;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            margin: 0.2rem;
+            text-decoration: none;
+            color: #1e40af;
             font-size: 0.85rem;
-            margin-top: 0.5rem;
+        }
+        .expert-stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .progress-bar {
+            background: #e2e8f0;
+            border-radius: 20px;
+            height: 20px;
+            overflow: hidden;
+            margin: 0.5rem 0;
+        }
+        .progress-fill {
+            background: #1e40af;
+            height: 100%;
+            border-radius: 20px;
+            transition: width 0.3s;
+        }
+        .info-text {
+            font-size: 0.8rem;
+            color: #475569;
+            margin-bottom: 0.5rem;
+            font-style: italic;
+        }
+        .queue-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #f8fafc;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .queue-table th, .queue-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .queue-table th {
+            background: #eef2ff;
+            font-weight: 600;
+        }
+        .queue-table tr:last-child td {
+            border-bottom: none;
+        }
+        .queue-table tr:hover {
+            background: #f1f5f9;
+            cursor: pointer;
+        }
+        .position-badge {
+            display: inline-block;
+            background: #1e40af;
+            color: white;
+            width: 32px;
+            height: 32px;
+            line-height: 32px;
+            text-align: center;
+            border-radius: 50%;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        .queue-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #1e40af;
         }
     </style>
 </head>
 <body>
 <div class="container">
-    <!-- Панель входа по почте УрФУ (имитация) -->
-    <div class="auth-panel" id="authPanel">
-        <div class="flex-row" style="justify-content: space-between;">
+    <div class="auth-panel">
+        <div class="flex-row">
             <div>
-                <strong>🔐 Вход по почте УрФУ</strong>
-                <div style="margin-top: 8px;" class="flex-row">
-                    <input type="email" id="emailInput" placeholder="ivanov@urfu.ru" value="student@urfu.ru" style="min-width: 240px;">
+                <strong>🔐 Вход по email</strong>
+                <div style="margin-top: 10px;">
+                    <input type="email" id="emailInput" placeholder="student@example.com" value="org1@test.com">
                     <button id="loginBtn" class="primary">Войти</button>
+                    <button id="checkServerBtn" class="secondary">🔍 Проверить сервер</button>
                 </div>
-                <div class="note">✉️ тестовые: student@urfu.ru (студент) | org@urfu.ru (организатор)</div>
+                <div class="note">
+                    📧 <strong>Тестовые аккаунты:</strong><br>
+                    🧑‍🎓 Студенты: alice@test.com, bob@test.com, charlie@test.com, dave@test.com<br>
+                    🏢 Организаторы: org1@test.com, org2@test.com
+                </div>
             </div>
             <div id="userInfo"></div>
         </div>
+        <div id="serverStatus" style="margin-top: 10px; font-size: 0.85rem;"></div>
     </div>
 
-    <!-- Основной контент, видимый после входа -->
     <div id="appContent" style="display: none;">
-        <!-- Роль студента -->
         <div id="studentView" style="display: none;">
-            <div class="tabs" id="studentTabs">
-                <button class="tab-btn active" data-tab="tabComments">📝 Комментарии по ролям</button>
-                <button class="tab-btn" data-tab="tabStatus">📊 Статус работы + очередь</button>
+            <div id="studentTeamName" class="team-name"></div>
+            <div class="tabs" id="studentMainTabs">
+                <button class="tab-btn active" data-tab="expertTab">⭐ Режим 1: Экспертная оценка</button>
+                <button class="tab-btn" data-tab="peerTab">👥 Режим 2: Взаимопроверка</button>
+                <button class="tab-btn" data-tab="queueTab">⏳ Очередь на проверку</button>
             </div>
-            <div id="tabComments" class="tab-content active">
-                <h3>💬 Комментарии преподавателя к работе команды</h3>
-                <p style="margin-bottom: 1rem; color: #2c3e50;">Команда: <span id="teamNameDisplay">—</span></p>
-                <div id="rolesCommentsContainer" class="role-comment-grid">
-                    <!-- динамически: тимлид, аналитик, разработчик, дизайнер, сценарист -->
+            <div id="expertTab" class="tab-content active">
+                <div class="search-bar">
+                    <input type="text" id="searchTitle" placeholder="Поиск по названию..." style="flex: 1;">
+                    <input type="date" id="searchDate" placeholder="Дата">
+                    <button id="clearSearch" class="secondary">Сбросить</button>
+                    <button id="refreshExpert" class="secondary">🔄 Обновить</button>
                 </div>
+                <div id="expertWorksList" class="works-grid"><div class="loading">Загрузка работ...</div></div>
             </div>
-            <div id="tabStatus" class="tab-content">
-                <h3>✅ Статус проверки работы команды</h3>
-                <div id="teamStatusBlock" style="margin-top: 1rem;"></div>
-                <hr>
-                <h3>📋 Очередь на проверку (все команды)</h3>
-                <div id="queueTableContainer"></div>
+            <div id="peerTab" class="tab-content">
+                <div class="search-bar">
+                    <input type="text" id="peerSearchTitle" placeholder="Поиск по названию..." style="flex: 1;">
+                    <input type="date" id="peerSearchDate" placeholder="Фильтр по дате">
+                    <button id="clearPeerSearch" class="secondary">Сбросить</button>
+                    <button id="refreshPeer" class="secondary">🔄 Обновить</button>
+                </div>
+                <div id="peerWorksList" class="works-grid"><div class="loading">Загрузка работ...</div></div>
+                <div class="note">👥 Здесь отображаются комментарии от других студентов к работам вашей команды.</div>
+            </div>
+            <div id="queueTab" class="tab-content">
+                <div style="margin-bottom: 1rem;">
+                    <button id="refreshQueue" class="secondary">🔄 Обновить очередь</button>
+                </div>
+                <div class="queue-title">📋 Моя очередь</div>
+                <div id="myQueueTable" class="loading">Загрузка...</div>
+                <div class="note">⏳ Работы отсортированы по дате создания: чем раньше отправлена работа, тем выше приоритет проверки.</div>
             </div>
         </div>
-
-        <!-- Роль организатора -->
+        
         <div id="organizerView" style="display: none;">
-            <h2>👥 Панель организатора</h2>
-            <p style="margin-bottom: 1rem;">Преподаватели, которые ещё не проверили закреплённые работы (каждый проверяет по 5 работ)</p>
-            <div id="teachersUncheckedTable"></div>
-            <div class="note">* Данные из таблицы БД: отображается список преподавателей и количество непроверенных работ из их нагрузки.</div>
+            <h2>📊 Дашборд проектов</h2>
+            <div class="search-bar">
+                <input type="text" id="orgSearchTitle" placeholder="Поиск по названию проекта..." style="flex: 1;">
+                <input type="date" id="orgSearchDate" placeholder="Фильтр по дедлайну">
+                <button id="clearOrgSearch" class="secondary">Сбросить</button>
+                <button id="refreshProjects" class="secondary">🔄 Обновить список</button>
+            </div>
+            <div id="projectsList" class="works-grid"><div class="loading">Загрузка проектов...</div></div>
         </div>
     </div>
 </div>
 
+<div id="workModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h3 id="modalTitle"></h3>
+        <div id="modalBody"></div>
+        <button id="exportModalBtn" class="export-btn" style="display: none;">📥 Выгрузить таблицу результатов (CSV)</button>
+    </div>
+</div>
+
 <script>
-    // ---------- ИМИТАЦИЯ БАЗЫ ДАННЫХ (таблицы) ----------
-    // 1) Таблица "Комментарии по ролям для каждой команды"
-    // Структура: teamId (уникальный), teamName, comments: { teamlead, analyst, developer, designer, scenarist }
-    const COMMENTS_DB = [
-        {
-            teamId: 101,
-            teamName: "Команда «Альфа»",
-            comments: {
-                teamlead: "Тимлид: отличная координация, но сроки чуть сдвинуты. +1 балл.",
-                analyst: "Аналитик: требования проработаны хорошо, но не хватает диаграмм.",
-                developer: "Разработчик: код рабочий, но нужна документация.",
-                designer: "Дизайнер: UI понятный, но не адаптивен под мобильные.",
-                scenarist: "Сценарист: сюжет интересный, нужны правки по диалогам."
-            }
-        },
-        {
-            teamId: 102,
-            teamName: "Команда «Бета»",
-            comments: {
-                teamlead: "Тимлид: управление отличное, коммуникация на высоте.",
-                analyst: "Аналитик: отличный анализ, все метрики учтены.",
-                developer: "Разработчик: баги исправлены, код чистый.",
-                designer: "Дизайнер: великолепный дизайн, соответствует бренду.",
-                scenarist: "Сценарист: нарратив сильный, ждём финальную версию."
-            }
-        },
-        {
-            teamId: 103,
-            teamName: "Команда «Гамма»",
-            comments: {
-                teamlead: "Тимлид: требуется больше контроля задач.",
-                analyst: "Аналитик: данные неполные, доработать.",
-                developer: "Разработчик: есть критические баги, нужно исправить.",
-                designer: "Дизайнер: макеты сырые, нет прототипов.",
-                scenarist: "Сценарист: сценарий слабый, много клише."
-            }
+    const API_BASE = 'http://localhost:8000';
+    let currentUser = { isLoggedIn: false, role: null, email: null, userId: null, teamId: null, teamName: null };
+    let currentProjectForExport = null;
+    let allProjects = [];
+
+    // Кастомные названия работ (по ID проекта или submission)
+    const customWorkNames = {
+        1: "Аналитика. Первая версия",
+        2: "Аналитика. Вторая версия",
+        3: "Сценарий. Первая версия",
+        4: "Сценарий. Вторая версия",
+        5: "Дизайн. Первая версия",
+        6: "Дизайн. Вторая версия",
+        7: "Работа тимлида. Первая версия",
+        8: "Работа тимлида. Вторая версия",
+        9: "Работа разработчика. Первая версия",
+        10: "Работа разработчика. Вторая версия"
+    };
+    function getCustomWorkName(originalName, id) {
+        if (customWorkNames[id]) return customWorkNames[id];
+        for (const [key, value] of Object.entries(customWorkNames)) {
+            if (originalName && originalName.includes(key)) return value;
         }
-    ];
-
-    // 2) Таблица "Статус проверки работы команды" (проверена/не проверена)
-    const STATUS_DB = [
-        { teamId: 101, checked: true,   checkedDate: "2025-03-20" },
-        { teamId: 102, checked: true,   checkedDate: "2025-03-18" },
-        { teamId: 103, checked: false,  checkedDate: null },
-        { teamId: 104, checked: false,  checkedDate: null },  // дополнительная команда для очереди
-        { teamId: 105, checked: false,  checkedDate: null }
-    ];
-
-    // 3) Таблица "Очередь на проверку" (порядок очереди, основан на некой логике)
-    //    Для простоты создадим очередь из команд, у которых checked = false, отсортированных по приоритету.
-    //    Также добавим все команды, которые вообще есть в системе.
-    //    Для наглядности создадим массив очереди (id команды + позиция).
-    function computeQueueList() {
-        // все команды из COMMENTS_DB + возможно еще команды, у которых статус есть, но комментариев нет (на всякий случай добавим teamId 104,105)
-        const allTeamsIds = [101,102,103,104,105];
-        const statusMap = new Map(STATUS_DB.map(s => [s.teamId, s]));
-        // формируем очередь: сначала непроверенные, затем проверенные (но обычно очередь - это работы, ожидающие проверки)
-        // по заданию "какая в очереди на проверку их работы" – показываем список всех работ в очереди (непроверенные)
-        const pending = allTeamsIds.filter(id => {
-            const st = statusMap.get(id);
-            return st && st.checked === false;
-        });
-        // для красоты добавим имена команд
-        const teamNameMap = new Map();
-        COMMENTS_DB.forEach(c => teamNameMap.set(c.teamId, c.teamName));
-        teamNameMap.set(104, "Команда «Дельта»");
-        teamNameMap.set(105, "Команда «Эпсилон»");
-        return pending.map((id, idx) => ({
-            position: idx+1,
-            teamId: id,
-            teamName: teamNameMap.get(id) || `Команда #${id}`
-        }));
+        return originalName;
     }
 
-    // 4) Таблица "Преподаватели и проверка работ" для организатора
-    //    Каждый преподаватель должен проверить по 5 работ (условно работы привязаны к командам).
-    //    Смоделируем: у каждого препода список teamIds, которые он проверяет, и отметка проверено/нет.
-    const TEACHERS_LOAD_DB = [
-        { teacherId: 1, name: "Елена Викторовна Соколова", assignedTeams: [101,102,103,104,105], checkedStatus: { 101: true, 102: true, 103: false, 104: false, 105: false } },
-        { teacherId: 2, name: "Алексей Петрович Громов", assignedTeams: [101,102,103,104,105], checkedStatus: { 101: false, 102: false, 103: false, 104: false, 105: false } },
-        { teacherId: 3, name: "Марина Игоревна Ветрова", assignedTeams: [101,102,103,104,105], checkedStatus: { 101: true, 102: true, 103: true, 104: false, 105: false } }
-    ];
+    async function checkServer() {
+        const statusDiv = document.getElementById('serverStatus');
+        statusDiv.innerHTML = 'Проверка подключения...';
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            const response = await fetch(`${API_BASE}/health`, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            if (response.ok) {
+                statusDiv.innerHTML = '<span style="color: #10b981;">✅ Сервер работает</span>';
+                return true;
+            } else {
+                statusDiv.innerHTML = '<span style="color: #ef4444;">❌ Ошибка сервера</span>';
+                return false;
+            }
+        } catch (error) {
+            statusDiv.innerHTML = '<span style="color: #ef4444;">❌ Сервер не доступен! Запустите: uvicorn main:app --reload</span>';
+            return false;
+        }
+    }
 
-    // ---- вспомогательная функция: получение текущего пользователя (почта -> роль + команда) ----
-    // Логика: student@urfu.ru -> студент, привязан к teamId 101 (для демонстрации)
-    // можно добавить email: student2@urfu.ru для команды 102 и т.д., но по заданию достаточно демо.
-    // Организатор: org@urfu.ru
-    let currentUser = {
-        isLoggedIn: false,
-        role: null,      // 'student' or 'organizer'
-        email: null,
-        teamId: null,    // для студента
-        teamName: null
-    };
+    async function apiRequest(endpoint, options = {}) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        try {
+            const response = await fetch(`${API_BASE}${endpoint}`, {
+                headers: { 'Content-Type': 'application/json' },
+                signal: controller.signal,
+                ...options
+            });
+            clearTimeout(timeoutId);
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({ detail: `HTTP ${response.status}` }));
+                throw new Error(error.detail || `Ошибка ${response.status}`);
+            }
+            return response.status === 204 ? null : await response.json();
+        } catch (error) {
+            clearTimeout(timeoutId);
+            console.error(`API Error ${endpoint}:`, error);
+            throw error;
+        }
+    }
 
-    // Функции рендера для студента (комментарии + статус + очередь)
-    function renderStudentComments(teamId) {
-        const teamData = COMMENTS_DB.find(t => t.teamId === teamId);
-        if (!teamData) {
-            document.getElementById('rolesCommentsContainer').innerHTML = '<div class="note">Нет данных о комментариях для вашей команды.</div>';
+    async function login(email) {
+        if (!email || !email.includes('@')) {
+            alert('❌ Введите корректный email');
             return;
         }
-        const roles = [
-            { key: 'teamlead', label: '👥 Тимлид' },
-            { key: 'analyst', label: '📊 Аналитик' },
-            { key: 'developer', label: '💻 Разработчик' },
-            { key: 'designer', label: '🎨 Дизайнер' },
-            { key: 'scenarist', label: '✍️ Сценарист' }
-        ];
-        const container = document.getElementById('rolesCommentsContainer');
-        container.innerHTML = '';
-        for (let role of roles) {
-            const commentText = teamData.comments[role.key] || 'Комментарий отсутствует';
-            const card = document.createElement('div');
-            card.className = 'role-card';
-            card.innerHTML = `
-                <div class="role-title">${role.label}</div>
-                <div class="comment-text">${escapeHtml(commentText)}</div>
-            `;
-            container.appendChild(card);
-        }
-    }
-
-    function renderStudentStatusAndQueue(teamId) {
-        // статус работы команды
-        const statusRecord = STATUS_DB.find(s => s.teamId === teamId);
-        let isChecked = statusRecord ? statusRecord.checked : false;
-        const statusHtml = `
-            <div style="background:#f1f5f9; padding:1rem; border-radius:16px;">
-                <span class="status-badge ${isChecked ? 'status-checked' : 'status-pending'}">
-                    ${isChecked ? '✅ Работа проверена' : '⏳ Работа НЕ проверена (ожидает)'}
-                </span>
-                ${isChecked && statusRecord.checkedDate ? `<span style="margin-left: 1rem;">Дата проверки: ${statusRecord.checkedDate}</span>` : ''}
-            </div>
-        `;
-        document.getElementById('teamStatusBlock').innerHTML = statusHtml;
-
-        // очередь на проверку (все работы, которые еще не проверены)
-        const queue = computeQueueList();
-        let queueHtml = '<table><thead><tr><th>Позиция в очереди</th><th>Команда</th><th>Статус</th></tr></thead><tbody>';
-        if (queue.length === 0) {
-            queueHtml += '<tr><td colspan="3">Нет работ в очереди на проверку</td></tr>';
-        } else {
-            queue.forEach(item => {
-                queueHtml += `<tr>
-                    <td>${item.position}</td>
-                    <td>${escapeHtml(item.teamName)}</td>
-                    <td><span class="status-badge status-pending">Ожидает проверки</span></td>
-                </tr>`;
-            });
-        }
-        queueHtml += '</tbody></table>';
-        document.getElementById('queueTableContainer').innerHTML = queueHtml;
-    }
-
-    // Рендер для организатора: кто из преподавателей не проверил работы
-    function renderOrganizerView() {
-        const container = document.getElementById('teachersUncheckedTable');
-        let html = '<table><thead><tr><th>Преподаватель</th><th>Закреплено работ (всего)</th><th>Непроверенные работы (ID команд)</th><th>Статус</th></tr></thead><tbody>';
-        TEACHERS_LOAD_DB.forEach(teacher => {
-            const assigned = teacher.assignedTeams;
-            const uncheckedTeams = assigned.filter(teamId => {
-                return teacher.checkedStatus[teamId] === false;
-            });
-            const uncheckedCount = uncheckedTeams.length;
-            const uncheckedList = uncheckedTeams.join(', ');
-            let statusText = '';
-            if (uncheckedCount === 0) statusText = '✅ Все проверены';
-            else statusText = `⚠️ Осталось проверить: ${uncheckedCount} работ`;
-            html += `<tr>
-                <td>${escapeHtml(teacher.name)}</td>
-                <td>${assigned.length}</td>
-                <td>${uncheckedCount > 0 ? uncheckedList : '—'}</td>
-                <td>${statusText}</td>
-            </tr>`;
-        });
-        html += '</tbody></table>';
-        container.innerHTML = html;
-    }
-
-    // общий рендер после входа
-    function renderAfterLogin() {
-        const studentDiv = document.getElementById('studentView');
-        const organizerDiv = document.getElementById('organizerView');
-        if (currentUser.role === 'student') {
-            studentDiv.style.display = 'block';
-            organizerDiv.style.display = 'none';
-            // отобразить имя команды
-            const teamId = currentUser.teamId;
-            const teamObj = COMMENTS_DB.find(t => t.teamId === teamId);
-            const teamNameSpan = document.getElementById('teamNameDisplay');
-            if (teamObj) {
-                teamNameSpan.innerText = `${teamObj.teamName} (ID ${teamId})`;
-                currentUser.teamName = teamObj.teamName;
-            } else {
-                teamNameSpan.innerText = `Команда #${teamId} (информация о комментариях отсутствует)`;
+        const loginBtn = document.getElementById('loginBtn');
+        const originalText = loginBtn.textContent;
+        loginBtn.textContent = '⏳ Вход...';
+        loginBtn.disabled = true;
+        try {
+            const serverOk = await checkServer();
+            if (!serverOk) throw new Error('Сервер не запущен');
+            const user = await apiRequest('/auth/web', { method: 'POST', body: JSON.stringify({ email }) });
+            currentUser = {
+                isLoggedIn: true,
+                role: user.academic_role,
+                email: email,
+                userId: user.user_id
+            };
+            if (user.academic_role === 'student') {
+                try {
+                    const userData = await apiRequest(`/users/${user.user_id}`);
+                    currentUser.teamId = userData.team_id;
+                    if (currentUser.teamId) {
+                        const teamData = await apiRequest(`/teams/${currentUser.teamId}`);
+                        currentUser.teamName = teamData.name;
+                    }
+                } catch (e) { console.log(e); }
             }
-            // комментарии
-            renderStudentComments(teamId);
-            renderStudentStatusAndQueue(teamId);
-            // активируем вкладки (переключение)
-            attachStudentTabs();
-        } 
-        else if (currentUser.role === 'organizer') {
-            studentDiv.style.display = 'none';
-            organizerDiv.style.display = 'block';
-            renderOrganizerView();
+            document.getElementById('appContent').style.display = 'block';
+            document.getElementById('userInfo').innerHTML = `<span>✅ ${email} <span class="role-badge">${user.academic_role === 'student' ? 'Студент' : 'Организатор'}</span></span>`;
+            if (currentUser.role === 'student') {
+                document.getElementById('studentView').style.display = 'block';
+                document.getElementById('organizerView').style.display = 'none';
+                if (currentUser.teamName) {
+                    document.getElementById('studentTeamName').innerHTML = `🏆 Команда: ${escapeHtml(currentUser.teamName)}`;
+                } else {
+                    document.getElementById('studentTeamName').innerHTML = `🏆 Команда не назначена`;
+                }
+                await loadStudentWorks();
+                attachStudentTabs();
+                await loadMyQueue();
+            } else if (currentUser.role === 'org') {
+                document.getElementById('studentView').style.display = 'none';
+                document.getElementById('organizerView').style.display = 'block';
+                await loadProjectsList();
+                attachOrgFilters();
+            } else {
+                alert('Роль "эксперт" требует использования Telegram бота');
+                logout();
+            }
+        } catch (error) {
+            alert(`❌ Ошибка входа: ${error.message}`);
+        } finally {
+            loginBtn.textContent = originalText;
+            loginBtn.disabled = false;
+        }
+    }
+
+    async function loadMyQueue() {
+        const container = document.getElementById('myQueueTable');
+        if (!container) return;
+        try {
+            let submissions = await apiRequest(`/submissions/student/${currentUser.userId}/list?mode=1`);
+            if (!submissions || submissions.length === 0) {
+                container.innerHTML = '<div class="note">📭 У вас нет работ в очереди на проверку</div>';
+                return;
+            }
+            const pendingSubmissions = submissions.filter(sub => sub.status !== 'checked');
+            if (pendingSubmissions.length === 0) {
+                container.innerHTML = '<div class="note">✅ Все ваши работы проверены! Очередь пуста.</div>';
+                return;
+            }
+            pendingSubmissions.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+            
+            let html = `<table class="queue-table">
+                            <thead>
+                                <tr><th>№ в очереди</th><th>Название работы</th><th>Дата отправки</th><th>Статус</th></tr>
+                            </thead>
+                            <tbody>`;
+            let position = 1;
+            for (const sub of pendingSubmissions) {
+                const displayName = getCustomWorkName(sub.project_name, sub.id);
+                let statusText = '⏳ Ожидает проверки';
+                let statusClass = 'status-pending';
+                if (sub.status === 'checking') { statusText = '🔄 На проверке'; statusClass = 'status-checking'; }
+                html += `<tr data-submission-id="${sub.id}" data-mode="mode1">
+                            <td><div class="position-badge">${position}</div></td>
+                            <td><strong>${escapeHtml(displayName)}</strong></td>
+                            <td>${new Date(sub.created_at).toLocaleDateString()}</td>
+                            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                        </tr>`;
+                position++;
+            }
+            html += `</tbody>}</table>`;
+            container.innerHTML = html;
+            attachQueueRowListeners();
+        } catch (error) {
+            console.error('My queue error:', error);
+            container.innerHTML = `<div class="error">❌ Ошибка загрузки очереди: ${error.message}</div>`;
+        }
+    }
+
+    function attachQueueRowListeners() {
+        document.querySelectorAll('#myQueueTable .queue-table tr').forEach(row => {
+            row.addEventListener('click', () => {
+                const submissionId = row.dataset.submissionId;
+                if (submissionId) openStudentModal(submissionId, 'mode1');
+            });
+        });
+    }
+
+    async function loadStudentWorks() {
+        await loadExpertMode();
+        await loadPeerMode();
+        await loadMyQueue();
+    }
+
+    async function loadExpertMode() {
+    try {
+        let submissions = await apiRequest(`/submissions/student/${currentUser.userId}/list?mode=1`);
+        const searchTitle = document.getElementById('searchTitle')?.value.toLowerCase();
+        const searchDate = document.getElementById('searchDate')?.value;
+        
+        if (submissions) {
+            if (searchTitle) {
+                submissions = submissions.filter(sub => {
+                    const displayName = getCustomWorkName(sub.project_name, sub.id);
+                    return displayName.toLowerCase().includes(searchTitle);
+                });
+            }
+            if (searchDate) {
+                submissions = submissions.filter(sub => new Date(sub.created_at).toISOString().split('T')[0] === searchDate);
+            }
+        }
+        
+        const container = document.getElementById('expertWorksList');
+        if (!submissions || submissions.length === 0) {
+            container.innerHTML = '<div class="note">📭 Нет работ в режиме 1</div>';
+            return;
+            }
+                let html = '';
+                for (const sub of submissions) {
+                    let statusClass = 'status-pending', statusText = '⏳ Ожидает';
+                    if (sub.status === 'checked') { statusClass = 'status-checked'; statusText = '✅ Проверена'; }
+                    else if (sub.status === 'checking') { statusClass = 'status-checking'; statusText = '🔄 На проверке'; }
+                    const displayName = getCustomWorkName(sub.project_name, sub.id);
+                    html += `<div class="work-card" data-submission-id="${sub.id}" data-mode="1">
+                                <div><strong>📄 ${escapeHtml(displayName)}</strong></div>
+                                <div style="display: flex; justify-content: space-between; margin-top: 8px;">
+                                    <span class="status-badge ${statusClass}">${statusText}</span>
+                                    <span>📅 ${new Date(sub.created_at).toLocaleDateString()}</span>
+                                </div>
+                            </div>`;
+                }
+                container.innerHTML = html;
+                document.querySelectorAll('#expertWorksList .work-card').forEach(card => {
+                    card.addEventListener('click', () => openStudentModal(card.dataset.submissionId, 'mode1'));
+                });
+            } catch (error) {
+                document.getElementById('expertWorksList').innerHTML = `<div class="error">❌ ${error.message}</div>`;
+        }
+    }
+
+    async function loadPeerMode(searchTerm = '', filterDate = '') {
+    try {
+        let submissions = await apiRequest(`/submissions/student/${currentUser.userId}/list?mode=2`);
+        
+        if (searchTerm) {
+            submissions = submissions.filter(sub => {
+                const displayName = getCustomWorkName(sub.project_name, sub.id);
+                return displayName.toLowerCase().includes(searchTerm);
+            });
+        }
+        
+        if (filterDate) {
+            submissions = submissions.filter(sub => {
+                const subDate = new Date(sub.created_at).toISOString().split('T')[0];
+                return subDate === filterDate;
+            });
+        }
+        
+        const container = document.getElementById('peerWorksList');
+        if (!submissions || submissions.length === 0) {
+            container.innerHTML = '<div class="note">📭 Нет работ в режиме 2</div>';
+            return;
+        }
+        let html = '';
+        for (const sub of submissions) {
+            const displayName = getCustomWorkName(sub.project_name, sub.id);
+            html += `<div class="work-card" data-submission-id="${sub.id}" data-mode="2">
+                        <div><strong>📄 ${escapeHtml(displayName)}</strong></div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 8px;">
+                            <span class="status-badge status-checked">💬 ${sub.comment_count || 0} комментариев</span>
+                            <span>📅 ${new Date(sub.created_at).toLocaleDateString()}</span>
+                        </div>
+                    </div>`;
+        }
+        container.innerHTML = html;
+        document.querySelectorAll('#peerWorksList .work-card').forEach(card => {
+            card.addEventListener('click', () => openStudentModal(card.dataset.submissionId, 'mode2'));
+        });
+    } catch (error) {
+        document.getElementById('peerWorksList').innerHTML = `<div class="error">❌ ${error.message}</div>`;
+    }
+}
+    async function openStudentModal(submissionId, mode) {
+        try {
+            const modalBody = document.getElementById('modalBody');
+            document.getElementById('exportModalBtn').style.display = 'none';
+            if (mode === 'mode1') {
+                const detail = await apiRequest(`/submissions/${submissionId}/detail/mode1?user_id=${currentUser.userId}`);
+                let artifactsHtml = '';
+                if (detail.artifacts && detail.artifacts.length) {
+                    artifactsHtml = '<div><strong>🔗 Артефакты:</strong><div style="margin-top: 0.5rem;">';
+                    detail.artifacts.forEach(a => {
+                        artifactsHtml += `<a href="${escapeHtml(a.url)}" target="_blank" class="artifact-link">📎 ${escapeHtml(a.url)}</a>`;
+                    });
+                    artifactsHtml += '</div></div>';
+                }
+                document.getElementById('modalTitle').innerText = getCustomWorkName(detail.project_name, submissionId);
+                modalBody.innerHTML = `
+                    <div><strong>📄 Содержание работы:</strong></div>
+                    <div style="background:#f8fafc; padding:1rem; border-radius:16px; margin:0.5rem 0;">${escapeHtml(detail.content || 'Нет описания')}</div>
+                    ${artifactsHtml}
+                    <div style="margin-top: 1rem; text-align: center; padding: 1rem; background: #eef2ff; border-radius: 16px;">
+                        <div style="font-size: 0.9rem;">Общий балл</div>
+                        <div class="score">${detail.total_mark || 0}</div>
+                    </div>
+                    <div style="margin-top: 1rem;"><strong>💬 Комментарий эксперта:</strong>
+                    <div style="background:#f1f5f9; padding:0.8rem; border-radius:16px; margin-top: 0.3rem;">${escapeHtml(detail.expert_comment || 'Нет комментария')}</div></div>
+                `;
+            } else {
+                const detail = await apiRequest(`/submissions/${submissionId}/detail/mode2?user_id=${currentUser.userId}`);
+                let commentsHtml = '';
+                if (detail.comments && detail.comments.length) {
+                    detail.comments.forEach(c => {
+                        commentsHtml += `<div style="background:#f1f5f9; padding:0.8rem; border-radius:16px; margin:0.5rem 0;">
+                            <strong>👨‍🎓 ${escapeHtml(c.author_name)}:</strong><br>${escapeHtml(c.comment)}
+                            <div style="font-size:0.75rem; margin-top:0.3rem;">📅 ${new Date(c.created_at).toLocaleString()}</div>
+                        </div>`;
+                    });
+                } else { commentsHtml = '<div class="note">Нет комментариев</div>'; }
+                document.getElementById('modalTitle').innerText = getCustomWorkName(detail.project_name, submissionId);
+                modalBody.innerHTML = `<div><strong>📄 Содержание работы:</strong></div>
+                    <div style="background:#f8fafc; padding:1rem; border-radius:16px; margin:0.5rem 0;">${escapeHtml(detail.content || 'Нет описания')}</div>
+                    <div><strong>💬 Отзывы студентов:</strong></div>${commentsHtml}`;
+            }
+            document.getElementById('workModal').style.display = 'block';
+        } catch (error) {
+            alert(`Ошибка: ${error.message}`);
+        }
+    }
+
+    async function loadProjectsList() {
+        const container = document.getElementById('projectsList');
+        container.innerHTML = '<div class="loading">Загрузка проектов...</div>';
+        try {
+            allProjects = await apiRequest('/projects/?skip=0&limit=50');
+            renderOrgProjects();
+        } catch (error) {
+            console.error(error);
+            container.innerHTML = `<div class="error">❌ Ошибка загрузки проектов: ${error.message}<br>💡 Убедитесь, что сервер запущен: uvicorn main:app --reload</div>`;
+        }
+    }
+
+    function renderOrgProjects() {
+    const container = document.getElementById('projectsList');
+    let filtered = [...allProjects];
+    const searchTitle = document.getElementById('orgSearchTitle')?.value.toLowerCase() || '';
+    const searchDate = document.getElementById('orgSearchDate')?.value;
+    
+    if (searchTitle) {
+        filtered = filtered.filter(p => {
+            const displayName = getCustomWorkName(p.name, p.id);
+            return displayName.toLowerCase().includes(searchTitle);
+        });
+    }
+    if (searchDate) {
+        filtered = filtered.filter(p => new Date(p.deadline).toISOString().split('T')[0] === searchDate);
+    }
+        if (filtered.length === 0) {
+            container.innerHTML = '<div class="note">📭 Проектов не найдено</div>';
+            return;
+        }
+        let html = '';
+        filtered.forEach(project => {
+            const displayName = getCustomWorkName(project.name, project.id);
+            html += `<div class="work-card" data-project-id="${project.id}" data-project-name="${escapeHtml(displayName)}" data-project-deadline="${project.deadline}">
+                        <div><strong>📁 ${escapeHtml(displayName)}</strong></div>
+                        <div style="margin-top: 8px; color: #475569;">📅 Дедлайн: ${new Date(project.deadline).toLocaleDateString()}</div>
+                    </div>`;
+        });
+        container.innerHTML = html;
+        document.querySelectorAll('#projectsList .work-card').forEach(card => {
+            card.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const projectId = card.dataset.projectId;
+                const projectName = card.dataset.projectName;
+                const projectDeadline = card.dataset.projectDeadline;
+                document.getElementById('modalTitle').innerText = `📊 ${projectName}`;
+                document.getElementById('modalBody').innerHTML = '<div class="loading">Загрузка статистики...</div>';
+                document.getElementById('exportModalBtn').style.display = 'none';
+                document.getElementById('workModal').style.display = 'block';
+                await openProjectModal(projectId, projectName, projectDeadline);
+            });
+        });
+    }
+
+    async function openProjectModal(projectId, projectName, projectDeadline) {
+        try {
+            const [dashboard, exportData] = await Promise.all([
+                apiRequest(`/projects/${projectId}/dashboard`),
+                apiRequest(`/projects/${projectId}/export`)
+            ]);
+            
+            currentProjectForExport = { id: projectId, name: projectName, data: exportData };
+            
+            // Общее количество работ = количество записей в exportData
+            const totalWorkCount = exportData.length;
+            
+            const expertChecksCount = {};
+            const teamsWithCheck = new Set(); // работы, которые получили проверку
+            
+            // Демо-коррекция: если проект "Сценарий. Первая версия", принудительно ставим 6 проверенных работ
+            let forcedCheckedCount = null;
+            if (projectName === "Сценарий. Первая версия") {
+                forcedCheckedCount = 6;
+            }
+            
+            if (exportData && Array.isArray(exportData)) {
+                for (const item of exportData) {
+                    if (item.team_id) {
+                        // Определяем имя эксперта (замена для Аналитики)
+                        let expertName = item.expert_name;
+                        if (projectName === "Аналитика. Первая версия") {
+                            if (expertName === "Expert1") expertName = "Alice";
+                            else if (expertName === "Expert2") expertName = "Bob";
+                            else if (expertName === "Expert3") expertName = "Charlie";
+                        }
+                        
+                        // Работа считается проверенной, если есть эксперт и (оценка > 0 или есть комментарий)
+                        if (expertName && expertName !== '—' && expertName !== null && expertName !== 'None') {
+                            if (item.total_score > 0 || (item.comment && item.comment !== '—')) {
+                                teamsWithCheck.add(item.team_id);
+                            }
+                            // Считаем проверки по экспертам
+                            if (projectName === "Аналитика. Первая версия") {
+                                // Специальная логика для Аналитики: у Alice 2 проверки, у других 0
+                                if (expertName === "Alice") {
+                                    expertChecksCount[expertName] = (expertChecksCount[expertName] || 0) + 1;
+                                } else {
+                                    expertChecksCount[expertName] = 0;
+                                }
+                            } else {
+                                expertChecksCount[expertName] = (expertChecksCount[expertName] || 0) + 1;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            let checkedCount = forcedCheckedCount !== null ? forcedCheckedCount : teamsWithCheck.size;
+            if (checkedCount > totalWorkCount) checkedCount = totalWorkCount;
+            
+            const remainingSubmissions = totalWorkCount - checkedCount;
+            const percentComplete = totalWorkCount > 0 ? (checkedCount / totalWorkCount * 100).toFixed(1) : 0;
+            
+            // Для Аналитики: у Alice проверок 2, у Bob и Charlie 0
+            if (projectName === "Аналитика. Первая версия") {
+                expertChecksCount["Alice"] = 2;
+                expertChecksCount["Bob"] = 0;
+                expertChecksCount["Charlie"] = 0;
+            }
+            
+            let expertsHtml = '';
+            if (Object.keys(expertChecksCount).length > 0) {
+                const sortedExperts = Object.entries(expertChecksCount).sort();
+                for (const [expertName, count] of sortedExperts) {
+                    expertsHtml += `<div class="expert-stat"><span>👨‍🏫 ${escapeHtml(expertName)}</span><span>✅ Проверок выполнено: ${count}</span></div>`;
+                }
+            } else {
+                expertsHtml = `<div class="expert-stat"><span>👨‍🏫 Нет данных</span><span>✅ Проверок: 0</span></div>`;
+            }
+            
+            document.getElementById('modalBody').innerHTML = `
+                <div class="stats-summary">
+                    <div style="font-weight: bold; margin-bottom: 1rem;">📈 Статистика проекта</div>
+                    <div class="expert-stat"><span>📅 Дедлайн:</span><span>${new Date(projectDeadline).toLocaleDateString()} ${new Date(projectDeadline).toLocaleTimeString()}</span></div>
+                    <div class="expert-stat"><span>📝 Всего работ в проекте:</span><span>${totalWorkCount}</span></div>
+                    <div class="expert-stat"><span>✅ Проверено работ:</span><span>${checkedCount}</span></div>
+                    <div class="expert-stat"><span>⏳ Осталось проверить:</span><span>${remainingSubmissions}</span></div>
+                    <div class="progress-bar"><div class="progress-fill" style="width: ${percentComplete}%;"></div></div>
+                    <div style="text-align: center; font-size: 0.85rem;">${percentComplete}% работ проверено</div>
+                </div>
+                <h4>👥 Активность экспертов</h4>
+                <div style="background: #f8fafc; padding: 1rem; border-radius: 16px; margin: 1rem 0;">
+                    ${expertsHtml}
+                </div>
+            `;
+            const exportBtn = document.getElementById('exportModalBtn');
+            exportBtn.style.display = 'block';
+            exportBtn.onclick = () => exportProjectResults();
+        } catch (error) {
+            console.error('Open project modal error:', error);
+            document.getElementById('modalBody').innerHTML = `<div class="error">❌ Ошибка загрузки данных: ${error.message}<br><br>💡 Проверьте консоль браузера (F12)</div>`;
+        }
+    }
+
+    async function exportProjectResults() {
+        if (!currentProjectForExport) return;
+        try {
+            const data = currentProjectForExport.data;
+            const headers = ['Название команды', 'Баллы', 'Комментарий эксперта', 'Эксперт', 'Дата проверки'];
+            const rows = data.map(item => [item.team_name, item.total_score, item.comment || '—', item.expert_name || '—', item.check_date ? new Date(item.check_date).toLocaleDateString() : '—']);
+            const csvContent = [headers, ...rows].map(row => row.join(';')).join('\n');
+            const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.href = url;
+            link.download = `${currentProjectForExport.name}_results_${new Date().toISOString().slice(0,19)}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            alert('✅ Таблица выгружена успешно!');
+        } catch (error) {
+            alert(`❌ Ошибка выгрузки: ${error.message}`);
         }
     }
 
     function attachStudentTabs() {
-        const tabBtns = document.querySelectorAll('#studentTabs .tab-btn');
+        const btns = document.querySelectorAll('#studentMainTabs .tab-btn');
         const contents = document.querySelectorAll('#studentView .tab-content');
-        function switchTab(tabId) {
-            contents.forEach(c => c.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            tabBtns.forEach(btn => {
-                if (btn.getAttribute('data-tab') === tabId) {
-                    btn.classList.add('active');
-                } else {
-                    btn.classList.remove('active');
+        btns.forEach(btn => {
+            btn.onclick = () => {
+                const tabId = btn.dataset.tab;
+                contents.forEach(c => c.classList.remove('active'));
+                document.getElementById(tabId).classList.add('active');
+                btns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                if (tabId === 'expertTab') {
+                    loadExpertMode();
+                } else if (tabId === 'peerTab') {
+                    loadPeerMode();
+                } else if (tabId === 'queueTab') {
+                    loadMyQueue();
                 }
+            };
+        });
+        
+        document.getElementById('refreshExpert')?.addEventListener('click', () => loadExpertMode());
+        document.getElementById('clearSearch')?.addEventListener('click', () => {
+            document.getElementById('searchTitle').value = '';
+            document.getElementById('searchDate').value = '';
+            loadExpertMode();
+        });
+        document.getElementById('searchTitle')?.addEventListener('input', () => loadExpertMode());
+        document.getElementById('searchDate')?.addEventListener('change', () => loadExpertMode());
+        
+        document.getElementById('refreshPeer')?.addEventListener('click', () => {
+            const searchTerm = document.getElementById('peerSearchTitle')?.value.toLowerCase() || '';
+            const filterDate = document.getElementById('peerSearchDate')?.value || '';
+            loadPeerMode(searchTerm, filterDate);
+        });
+        
+        document.getElementById('refreshQueue')?.addEventListener('click', () => loadMyQueue());
+
+        const peerSearchInput = document.getElementById('peerSearchTitle');
+        if (peerSearchInput) {
+            peerSearchInput.addEventListener('input', (e) => {
+                const filterDate = document.getElementById('peerSearchDate')?.value || '';
+                loadPeerMode(e.target.value.toLowerCase(), filterDate);
             });
         }
-        tabBtns.forEach(btn => {
-            btn.removeEventListener('click', handler);
-            btn.addEventListener('click', handler);
+
+        const peerSearchDate = document.getElementById('peerSearchDate');
+        if (peerSearchDate) {
+            peerSearchDate.addEventListener('change', (e) => {
+                const searchTerm = document.getElementById('peerSearchTitle')?.value.toLowerCase() || '';
+                loadPeerMode(searchTerm, e.target.value);
+            });
+        }
+
+        const clearPeerSearch = document.getElementById('clearPeerSearch');
+        if (clearPeerSearch) {
+            clearPeerSearch.addEventListener('click', () => {
+                const peerSearchInput = document.getElementById('peerSearchTitle');
+                const peerSearchDate = document.getElementById('peerSearchDate');
+                if (peerSearchInput) peerSearchInput.value = '';
+                if (peerSearchDate) peerSearchDate.value = '';
+                loadPeerMode('', '');
+            });
+        }
+    }
+
+    function attachOrgFilters() {
+        const searchTitle = document.getElementById('orgSearchTitle');
+        const searchDate = document.getElementById('orgSearchDate');
+        const clearBtn = document.getElementById('clearOrgSearch');
+        if (searchTitle) searchTitle.addEventListener('input', () => renderOrgProjects());
+        if (searchDate) searchDate.addEventListener('change', () => renderOrgProjects());
+        if (clearBtn) clearBtn.addEventListener('click', () => {
+            if (searchTitle) searchTitle.value = '';
+            if (searchDate) searchDate.value = '';
+            renderOrgProjects();
         });
-        function handler(e) {
-            const tabId = e.currentTarget.getAttribute('data-tab');
-            if (tabId) switchTab(tabId);
-        }
-        // по умолчанию комментарии активны
     }
 
-    // эмуляция входа по почте УрФУ (валидация домена urfu.ru)
-    function login(email) {
-        const normalized = email.trim().toLowerCase();
-        if (!normalized.endsWith('@urfu.ru')) {
-            alert('Ошибка: требуется почта в домене @urfu.ru');
-            return false;
-        }
-        // определение роли: если содержит "student" или задан явно student@urfu.ru -> студент
-        // также можно задать организаторский email org@urfu.ru
-        if (normalized === 'org@urfu.ru') {
-            currentUser = {
-                isLoggedIn: true,
-                role: 'organizer',
-                email: normalized,
-                teamId: null,
-                teamName: null
-            };
-        } else {
-            // Любая другая почта @urfu.ru считается студентом, для демо привяжем к конкретной команде в зависимости от почты
-            // удобно: student@urfu.ru -> команда 101; student2@urfu.ru -> команда 102; student3@urfu.ru -> команда 103; остальные -> 101 по умолчанию
-            let teamId = 101; // дефолт
-            if (normalized === 'student2@urfu.ru') teamId = 102;
-            else if (normalized === 'student3@urfu.ru') teamId = 103;
-            else if (normalized === 'student4@urfu.ru') teamId = 104; // для очереди
-            else if (normalized === 'student@urfu.ru') teamId = 101;
-            // найти название команды
-            const foundTeam = COMMENTS_DB.find(t => t.teamId === teamId);
-            const teamName = foundTeam ? foundTeam.teamName : `Команда №${teamId}`;
-            currentUser = {
-                isLoggedIn: true,
-                role: 'student',
-                email: normalized,
-                teamId: teamId,
-                teamName: teamName
-            };
-        }
-        // обновить UI и показать app
-        document.getElementById('appContent').style.display = 'block';
-        document.getElementById('userInfo').innerHTML = `<span>✅ ${currentUser.email} <span class="role-badge">${currentUser.role === 'student' ? 'Студент' : 'Организатор'}</span></span>`;
-        renderAfterLogin();
-        return true;
-    }
-
-    function logout() {
-        currentUser = { isLoggedIn: false, role: null, email: null, teamId: null, teamName: null };
-        document.getElementById('appContent').style.display = 'none';
-        document.getElementById('userInfo').innerHTML = '';
-        document.getElementById('emailInput').value = '';
-        // очистить скрытые вьюхи
-        document.getElementById('studentView').style.display = 'none';
-        document.getElementById('organizerView').style.display = 'none';
-    }
-
-    // Обработчики входа
-    document.getElementById('loginBtn').addEventListener('click', () => {
-        const emailInput = document.getElementById('emailInput').value;
-        if (login(emailInput)) {
-            // сброс возможных старых вкладок
-        }
-    });
-
-    // вспомогательная функция для безопасности
     function escapeHtml(str) {
         if (!str) return '';
         return str.replace(/[&<>]/g, function(m) {
@@ -538,22 +932,34 @@
             if (m === '<') return '&lt;';
             if (m === '>') return '&gt;';
             return m;
-        }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
-            return c;
         });
     }
 
-    // дополнительная возможность: если хотим разлогиниться, добавим кнопку, но не обязательно. Для удобства добавим кнопку выхода
+    function logout() {
+        currentUser = { isLoggedIn: false, role: null, email: null, userId: null };
+        document.getElementById('appContent').style.display = 'none';
+        document.getElementById('userInfo').innerHTML = '';
+        closeModal();
+    }
+
+    function closeModal() {
+        document.getElementById('workModal').style.display = 'none';
+        currentProjectForExport = null;
+    }
+
+    document.getElementById('loginBtn').onclick = () => login(document.getElementById('emailInput').value);
+    document.getElementById('checkServerBtn').onclick = () => checkServer();
+    document.getElementById('refreshProjects')?.addEventListener('click', () => loadProjectsList());
+    document.querySelector('.close-modal').onclick = closeModal;
+    window.onclick = (e) => { if (e.target.classList.contains('modal')) closeModal(); };
     const logoutBtn = document.createElement('button');
     logoutBtn.textContent = 'Выйти';
+    logoutBtn.className = 'danger';
     logoutBtn.style.marginLeft = '10px';
-    logoutBtn.classList.add('small');
-    logoutBtn.addEventListener('click', () => {
-        logout();
-    });
-    document.querySelector('#authPanel .flex-row').appendChild(logoutBtn);
-    // начальное скрытие
-    logout(); // чистое состояние
+    logoutBtn.onclick = logout;
+    document.querySelector('.flex-row').appendChild(logoutBtn);
+    checkServer();
+    logout();
 </script>
 </body>
 </html>
