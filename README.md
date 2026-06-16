@@ -1,0 +1,29 @@
+Базовый URL: http://localhost:8000/
+# Swagger (авто документация): http://127.0.0.1:8000/docs#/
+
+# в .gitignore и .env.example примеры того, как в будущем работать с токенами, паролями и прочим, что не дожно идти в общий доступ
+
+# чтобы работать с бд
+нужно скачать mysql и настроить его (мини гайд https://www.youtube.com/watch?v=hiS_mWZmmI0) ((если что, спрашивайте у иишки))
+можно скачать dbeaver, удобен для просмотра содержимого бд и прочего
+после этого идите в sql stuff/setup_database.sql и выполните каждый запрос сверху вниз. если что-то не так, в clear_database.sql есть дроп дб
+
+# не забудьте также скачать нужные библиотеки:
+
+1. Создать виртуальное окружение (рекомендуется)
+python -m venv venv
+
+2. Активировать:
+Windows
+venv\Scripts\activate
+
+Linux
+source venv/bin/activate
+
+3. Установить все зависимости
+pip install -r requirements.txt
+
+# для запуска сервера:
+uvicorn main:app --host 127.0.0.1 --port 8000 --reload
+
+# откройте examples и смотрите то, что там есть
